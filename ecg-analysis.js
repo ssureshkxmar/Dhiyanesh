@@ -1,8 +1,9 @@
 // =============================================================
-//  ECG IMAGE ANALYSIS — Glassmorphic Pop-up Interface
-//  - Fully client-side processing
-//  - Grayscale & Peak Detection Visualization
-//  - Physiological Impact Mapping
+//  ECG AI ANALYSIS — Advanced Clinical Dashboard & Voice Assistant
+//  - Glassmorphic modal
+//  - Multi-stage image processing
+//  - Anatomical Highlighting (Engine Sync)
+//  - Speech Synthesis Voice Assistant
 // =============================================================
 
 (function () {
@@ -13,12 +14,16 @@
   // ── State ──────────────────────────────────────────────────
   let analysisResult = null;
   let originalImg = null;
+  let currentSpeech = null;
 
   // ── DOM References ─────────────────────────────────────────
   let modal, uploadBtn, uploadInput, closeBtn, applyBtn;
   let loadingEl, resultsEl, loadProgress;
   let summaryBpm, summaryRhythm, explanationText, affectedList;
   let grayscaleCvs, pointedCvs, leadsGrid;
+
+  // New Summary Box (Below Monitor)
+  let appliedBox, appliedRhythm, appliedAffected, appliedExplanation, voiceBtn, clearAppliedBtn;
 
   function init() {
     modal         = document.getElementById('ecg-ai-modal');
@@ -37,6 +42,14 @@
     pointedCvs    = document.getElementById('ai-pointed-cvs');
     leadsGrid     = document.getElementById('ai-leads-grid');
 
+    // Applied Box
+    appliedBox = document.getElementById('applied-analysis-box');
+    appliedRhythm = document.getElementById('applied-rhythm-label');
+    appliedAffected = document.getElementById('applied-affected-chips');
+    appliedExplanation = document.getElementById('applied-explanation-text');
+    voiceBtn = document.getElementById('voice-assistant-btn');
+    clearAppliedBtn = document.getElementById('clear-applied-btn');
+
     if (!uploadBtn || !modal) return;
 
     uploadBtn.addEventListener('click', () => uploadInput.click());
@@ -49,6 +62,9 @@
 
     closeBtn.addEventListener('click', () => closeModal());
     applyBtn.addEventListener('click', () => applyToHeart());
+
+    if (voiceBtn) voiceBtn.addEventListener('click', toggleSpeech);
+    if (clearAppliedBtn) clearAppliedBtn.addEventListener('click', resetView);
   }
 
   function openModal() {
@@ -62,6 +78,7 @@
 
   // ── Pipeline ───────────────────────────────────────────────
   function beginAnalysis(file) {
+    if (currentSpeech) window.speechSynthesis.cancel();
     openModal();
     loadingEl.style.display = 'flex';
     resultsEl.style.display = 'none';
@@ -71,7 +88,6 @@
     reader.onload = (ev) => {
       originalImg = new Image();
       originalImg.onload = () => {
-        // Step progress simulation
         setTimeout(() => { loadProgress.style.width = '30%'; }, 200);
         setTimeout(() => { loadProgress.style.width = '70%'; }, 500);
         setTimeout(() => { processImage(); }, 800);
@@ -87,29 +103,20 @@
     const H = originalImg.naturalHeight;
 
     const canvas = document.createElement('canvas');
-    canvas.width = W;
-    canvas.height = H;
+    canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(originalImg, 0, 0);
 
-    // 1. Grayscale Process
     generateGrayscale(W, H);
-
-    // 2. Peak Detection & Signal Extraction
     const { peaks, bpm } = detectPeaks(ctx, W, H);
     generatePointedWaves(W, H, peaks);
 
-    // 3. Rhythm Analysis
     const rhythm = getRhythm(bpm);
     analysisResult = { bpm, rhythm };
 
-    // 4. Slice 12 Leads
     renderLeadSlices(canvas, W, H);
-
-    // 5. Build Medical Explanation & Impact List
     populateSummary(bpm, rhythm);
 
-    // Ready
     loadingEl.style.display = 'none';
     resultsEl.style.display = 'block';
   }
@@ -118,74 +125,51 @@
 
   function generateGrayscale(w, h) {
     const gctx = grayscaleCvs.getContext('2d');
-    grayscaleCvs.width = w;
-    grayscaleCvs.height = h;
+    grayscaleCvs.width = w; grayscaleCvs.height = h;
     gctx.drawImage(originalImg, 0, 0);
-
     const imgData = gctx.getImageData(0,0,w,h);
-    const data = imgData.data;
-    for (let i = 0; i < data.length; i += 4) {
-      const avg = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
-      data[i] = data[i+1] = data[i+2] = avg;
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const g = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+      d[i] = d[i+1] = d[i+2] = g;
     }
     gctx.putImageData(imgData, 0, 0);
-
-    // Optional Grid Overlay
-    gctx.strokeStyle = 'rgba(0,255,136,0.1)';
-    gctx.lineWidth = 1;
-    for(let x=0; x<w; x+=20){ gctx.beginPath(); gctx.moveTo(x,0); gctx.lineTo(x,h); gctx.stroke(); }
   }
 
   function detectPeaks(ctx, w, h) {
-    const stripY = Math.floor(h * 0.3); // Lead II area
+    const stripY = Math.floor(h * 0.3);
     const px = ctx.getImageData(0, stripY, w, 1).data;
     const sig = [];
     for(let i=0; i<w; i++){
-      const k = i*4;
-      sig.push(0.3*px[k] + 0.59*px[k+1] + 0.11*px[k+2]);
+      const k = i*4; sig.push(0.3*px[k] + 0.59*px[k+1] + 0.11*px[k+2]);
     }
     const avg = sig.reduce((a,b)=>a+b,0)/sig.length;
     const thr = avg > 128 ? avg * 0.7 : avg * 1.3;
     const peaks = [];
     const minDist = w * 0.05;
     for(let i=1; i<w-1; i++){
-      const isPeak = (avg > 128) ? (sig[i]<thr && sig[i]<sig[i-1] && sig[i]<sig[i+1]) : (sig[i]>thr && sig[i]>sig[i-1] && sig[i]>sig[i+1]);
-      if(isPeak && (peaks.length===0 || i - peaks[peaks.length-1].x > minDist)){
+      const isP = (avg > 128) ? (sig[i]<thr && sig[i]<sig[i-1] && sig[i]<sig[i+1]) : (sig[i]>thr && sig[i]>sig[i-1] && sig[i]>sig[i+1]);
+      if(isP && (peaks.length===0 || i - peaks[peaks.length-1].x > minDist)){
         peaks.push({x: i, y: stripY});
       }
     }
-    // Calculate BPM
     let bpm = 72;
     if(peaks.length >= 2){
       const rr = (peaks[peaks.length-1].x - peaks[0].x) / (peaks.length-1);
       const pxPerSec = w / 10;
       bpm = 60 / (rr / pxPerSec);
-    } else {
-      bpm = 60 + Math.floor(Math.random()*40);
     }
     return { peaks, bpm: Math.round(bpm) };
   }
 
   function generatePointedWaves(w, h, peaks) {
     const pctx = pointedCvs.getContext('2d');
-    pointedCvs.width = w;
-    pointedCvs.height = h;
+    pointedCvs.width = w; pointedCvs.height = h;
     pctx.drawImage(originalImg, 0, 0);
-
-    // Draw markers
-    pctx.strokeStyle = '#00ff88';
-    pctx.lineWidth = 3;
-    pctx.fillStyle = 'rgba(0, 255, 136, 0.2)';
+    pctx.strokeStyle = '#00ff88'; pctx.lineWidth = 3;
     peaks.forEach(p => {
       pctx.strokeRect(p.x - 15, p.y - 40, 30, 80);
-      pctx.fillRect(p.x - 15, p.y - 40, 30, 80);
-      // detection line
-      pctx.beginPath();
-      pctx.setLineDash([5, 5]);
-      pctx.moveTo(p.x, 0);
-      pctx.lineTo(p.x, h);
-      pctx.stroke();
-      pctx.setLineDash([]);
+      pctx.beginPath(); pctx.setLineDash([5, 5]); pctx.moveTo(p.x, 0); pctx.lineTo(p.x, h); pctx.stroke(); pctx.setLineDash([]);
     });
   }
 
@@ -193,15 +177,12 @@
     leadsGrid.innerHTML = '';
     const sliceW = w / 4;
     const sliceH = (h * 0.75) / 3;
-
     for(let i=0; i<12; i++){
-      const c = i % 4;
-      const r = Math.floor(i / 4);
+      const c = i % 4; const r = Math.floor(i / 4);
       const div = document.createElement('div');
       div.className = 'ecg-lead-mini';
-      div.innerHTML = `<label>Lead ${LEAD_NAMES[i]}</label><canvas id="mini-l-${i}"></canvas>`;
+      div.innerHTML = `<label>${LEAD_NAMES[i]}</label><canvas></canvas>`;
       leadsGrid.appendChild(div);
-
       const mcvs = div.querySelector('canvas');
       mcvs.width = 100; mcvs.height = 40;
       const mctx = mcvs.getContext('2d');
@@ -221,36 +202,20 @@
     summaryRhythm.textContent = rhythm.label;
     summaryRhythm.className = 'ecg-ai-rhythm-pill ' + rhythm.status;
 
-    // Explanation
     const explanations = {
-      normal: "<p>The cardiac cycle is normal. <strong>SA Node</strong> pacing is steady. Conduction through the <strong>Bundle of His</strong> and <strong>Purkinje fibers</strong> is perfectly synchronized.</p>",
-      tachy:  "<p>The heart rate is elevated. The <strong>SA Node</strong> (Sinoatrial) is overactive, causing rapid atrial depolarization. This reduces diastolic filling time in the <strong>Left Ventricle</strong>.</p>",
-      brady:  "<p>Heart rate is below threshold. Indicates a slow pacemaker rhythm originating from the <strong>SA node</strong> or potential high-degree AV block. Conduction is intact but delayed.</p>",
-      afib:   "<p>Chaotic electrical activity in the <strong>Atria</strong>. The irregular signals cause inefficient pumping and erratic ventricular response. High risk of embolism.</p>"
+      normal: "Standard heart rhythm detected at " + bpm + " beats per minute. The sinoatrial node is firing consistently, and all chambers are synchronized. This is a very healthy cardiac profile.",
+      tachy: "Tachycardia detected. The heart is beating rapidly at " + bpm + " beats per minute. This may be due to stress, dehydration, or an overactive S.A. node. Monitor for persistent elevation.",
+      brady: "Bradycardia observed. The rate is below sixty beats per minute. This is common in elite athletes but can also signify a conduction block in the cardiac electrical system.",
+      afib: "High suspicion of Atrial Fibrillation. The atria are exhibiting chaotic electrical signals. This leads to inefficient pumping and requires immediate medical correlation."
     };
-    explanationText.innerHTML = explanations[rhythm.key] || explanations.normal;
+    const text = explanations[rhythm.key] || explanations.normal;
+    explanationText.innerHTML = `<p>${text}</p>`;
 
-    // Affected parts mapping
     const impactMap = {
-      normal: [
-        {name: "SA Node", status: "Steady / Pacemaking", cls: "normal"},
-        {name: "Myocardium", status: "Regular Perfusion", cls: "normal"},
-        {name: "Mitral Valve", status: "Synced Opening", cls: "normal"}
-      ],
-      tachy: [
-        {name: "SA Node", status: "Overheating (Rapid)", cls: "affected"},
-        {name: "Atria", status: "Reduced Filling Time", cls: "affected"},
-        {name: "Ventricles", status: "High Workload", cls: "affected"}
-      ],
-      brady: [
-        {name: "SA Node", status: "Depressed Rate", cls: "affected"},
-        {name: "Conduction Core", status: "Delayed Impulse", cls: "affected"}
-      ],
-      afib: [
-        {name: "Atria", status: "Fibrillating (Erratic)", cls: "affected"},
-        {name: "AV Node", status: "Irregular Filtering", cls: "affected"},
-        {name: "Ventricles", status: "Stroke Vol Variance", cls: "affected"}
-      ]
+      normal: [{name: "SA Node", cls: "normal", engineId: "sanvan"}, {name: "Ventricles", cls: "normal", engineId: "rv"}],
+      tachy: [{name: "S.A. Node", cls: "affected", engineId: "sanvan"}, {name: "Myocardium", cls: "affected", engineId: "Heartmuscles"}],
+      brady: [{name: "Pacemaker", cls: "affected", engineId: "sanvan"}, {name: "AV Node", cls: "affected", engineId: "sanvan"}],
+      afib: [{name: "Right Atrium", cls: "affected", engineId: "ra"}, {name: "Left Atrium", cls: "affected", engineId: "la"}]
     };
 
     affectedList.innerHTML = '';
@@ -258,51 +223,109 @@
     impacts.forEach(hit => {
       const li = document.createElement('li');
       li.className = 'ai-affected-item ' + (hit.cls==='normal'?'normal':'');
-      li.innerHTML = `
-        <div class="ai-affected-dot"></div>
-        <div class="ai-affected-name">${hit.name}</div>
-        <div class="ai-affected-status">${hit.status}</div>
-      `;
+      li.innerHTML = `<div class="ai-affected-dot"></div><div class="ai-affected-name">${hit.name}</div><div class="ai-affected-status">Status Detected</div>`;
       affectedList.appendChild(li);
     });
+
+    analysisResult.text = text;
+    analysisResult.impacts = impacts;
   }
+
+  // ── Apply & Integration ────────────────────────────────────
 
   function applyToHeart() {
     if (!analysisResult) return;
 
-    // Resuming AudioContext satisfies browser autoplay policies
+    // Resuming AudioContext
     if (window.audioContexts) {
-      window.audioContexts.forEach(ctx => {
-        if (ctx.state === 'suspended') ctx.resume();
-      });
+      window.audioContexts.forEach(ctx => { if (ctx.state === 'suspended') ctx.resume(); });
     }
 
-    // Update 3D Speed & Monitor
+    // 1. Sync BPM & Speed
     const bpmSlider = document.getElementById('bpm-input');
     const speedSlider = document.getElementById('speed');
+    if (bpmSlider) { bpmSlider.value = analysisResult.bpm; bpmSlider.dispatchEvent(new Event('input', { bubbles: true })); }
+    if (speedSlider) { speedSlider.value = analysisResult.bpm / 90; speedSlider.dispatchEvent(new Event('input', { bubbles: true })); }
 
-    if (bpmSlider) {
-      bpmSlider.value = analysisResult.bpm;
-      bpmSlider.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+    // 2. Highlight Anatomical Affected Parts (Visual Engine)
+    highlightParts(analysisResult.impacts);
 
-    if (speedSlider) {
-      speedSlider.value = analysisResult.bpm / 90;
-      speedSlider.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+    // 3. Populate Sidebar Box (Below Monitor)
+    appliedRhythm.textContent = analysisResult.rhythm.label;
+    appliedRhythm.className = analysisResult.rhythm.status;
+    appliedExplanation.innerHTML = `<p>${analysisResult.text}</p>`;
+    appliedAffected.innerHTML = '';
+    analysisResult.impacts.forEach(hit => {
+      const chip = document.createElement('span');
+      chip.className = 'applied-chip ' + (hit.cls==='normal'?'normal':'');
+      chip.textContent = hit.name;
+      appliedAffected.appendChild(chip);
+    });
 
-    // Success state
+    appliedBox.style.display = 'block';
+
     applyBtn.textContent = "✓ Applied";
-    applyBtn.style.background = "#fff";
-    applyBtn.style.color = "#000";
-
     setTimeout(() => {
       closeModal();
-      // reset btn for next time
       applyBtn.textContent = "Apply Assessment";
-      applyBtn.style.background = "";
-      applyBtn.style.color = "";
-    }, 800);
+      // Auto-start Voice Assistant
+      startSpeech(analysisResult.text);
+    }, 600);
+  }
+
+  // ── Highlighting Logic ───────────────────────────────────────
+  function highlightParts(impacts) {
+    impacts.filter(i => i.cls === 'affected').forEach(hit => {
+      const slider = document.getElementById(hit.engineId);
+      if (!slider) return;
+
+      // Pulse effect via engine hooks
+      let count = 0;
+      const interval = setInterval(() => {
+        slider.value = (count % 2 === 0) ? 0.3 : 1;
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+        count++;
+        if (count > 6) {
+          clearInterval(interval);
+          slider.value = 1;
+          slider.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }, 300);
+    });
+  }
+
+  // ── Voice Assistant (Speech Synthesis) ────────────────────────
+  function startSpeech(text) {
+    if (currentSpeech) window.speechSynthesis.cancel();
+    
+    currentSpeech = new SpeechSynthesisUtterance("Analysis Result. " + text);
+    currentSpeech.rate = 0.95;
+    currentSpeech.pitch = 1.1;
+
+    currentSpeech.onstart = () => voiceBtn.classList.add('speaking');
+    currentSpeech.onend = () => voiceBtn.classList.remove('speaking');
+    currentSpeech.onerror = () => voiceBtn.classList.remove('speaking');
+
+    window.speechSynthesis.speak(currentSpeech);
+  }
+
+  function toggleSpeech() {
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      voiceBtn.classList.remove('speaking');
+    } else if (analysisResult) {
+      startSpeech(analysisResult.text);
+    }
+  }
+
+  function resetView() {
+    appliedBox.style.display = 'none';
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    // Restore all parts to full visibility
+    ["sanvan","ra","la","rv","lv","Heartmuscles"].forEach(id => {
+      const s = document.getElementById(id);
+      if (s) { s.value = 1; s.dispatchEvent(new Event('input', { bubbles: true })); }
+    });
   }
 
   // --- Boot ---

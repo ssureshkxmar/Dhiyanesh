@@ -1,5 +1,5 @@
 /* ================================================================
-   ECG AI Analysis — Glassmorphism Modal Styles
+   ECG AI Analysis — Glassmorphism Modal & Applied Summary Styles
    ================================================================ */
 
 :root {
@@ -188,15 +188,14 @@
 .ecg-ai-scroll-area::-webkit-scrollbar { width: 4px; }
 .ecg-ai-scroll-area::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 2px; }
 
-/* ── Sub Panels ────────────────────────────────────────────── */
 .ecg-ai-panel {
   background: var(--panel-bg);
   border: 1px solid var(--modal-border);
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px;
 }
 .ecg-ai-panel h3 {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: rgba(255, 255, 255, 0.7);
@@ -213,88 +212,35 @@
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
-.img-container canvas {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-}
-
-/* ── Grids ────────────────────────────────────────────────── */
-.ecg-ai-grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.ai-leads-grid-2x6 {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-}
-
-.ecg-lead-mini {
-  background: #000;
-  border-radius: 4px;
-  padding: 4px;
-}
-.ecg-lead-mini label {
-  display: block;
-  font-size: 0.55rem;
-  font-weight: 700;
-  color: var(--modal-accent);
-  margin-bottom: 2px;
-}
-.ecg-lead-mini canvas {
-  width: 100%;
-  height: 40px;
-}
+.img-container canvas { width: 100%; height: 100%; object-fit: contain; display: block; }
+.ecg-ai-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.ai-leads-grid-2x6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.ecg-lead-mini { background: #000; border-radius: 4px; padding: 4px; }
+.ecg-lead-mini label { display: block; font-size: 0.52rem; font-weight: 700; color: var(--modal-accent); margin-bottom: 2px; }
+.ecg-lead-mini canvas { width: 100%; height: 32px; }
 
 /* ── Affected List ─────────────────────────────────────────── */
-.ai-affected-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+.ai-affected-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .ai-affected-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 10px 14px;
   background: rgba(248, 113, 113, 0.08);
   border: 1px solid rgba(248, 113, 113, 0.2);
   border-radius: 8px;
-  transition: transform 0.2s;
 }
-.ai-affected-item:hover { transform: translateX(8px); }
-.ai-affected-dot {
-  width: 8px;
-  height: 8px;
-  background: #f87171;
-  border-radius: 50%;
-  box-shadow: 0 0 12px #f87171;
-}
-.ai-affected-item.normal {
-  background: rgba(0, 255, 136, 0.05);
-  border-color: rgba(0, 255, 136, 0.15);
-}
+.ai-affected-dot { width: 8px; height: 8px; background: #f87171; border-radius: 50%; box-shadow: 0 0 10px #f87171; }
+.ai-affected-item.normal { background: rgba(0, 255, 136, 0.05); border-color: rgba(0, 255, 136, 0.15); }
 .ai-affected-item.normal .ai-affected-dot { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
-.ai-affected-name { font-weight: 600; font-size: 0.9rem; flex: 1; }
-.ai-affected-status { font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.05em; }
+.ai-affected-name { font-weight: 600; font-size: 0.85rem; flex: 1; }
+.ai-affected-status { font-size: 0.65rem; color: rgba(255,255,255,0.4); text-transform: uppercase; }
 
 /* ── Explanation ───────────────────────────────────────────── */
-.ecg-ai-explanation-text {
-  font-size: 0.9rem;
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.7);
-}
-.ecg-ai-explanation-text p { margin: 0 0 12px 0; }
+.ecg-ai-explanation-text { font-size: 0.85rem; line-height: 1.65; color: rgba(255, 255, 255, 0.7); }
+.ecg-ai-explanation-text p { margin: 0 0 10px 0; }
 .ecg-ai-explanation-text strong { color: #fff; }
 
-/* ── Apply Button ─────────────────────────────────────────── */
 .ai-apply-btn {
   background: var(--modal-accent);
   color: #000;
@@ -309,22 +255,108 @@
   gap: 10px;
   transition: all 0.25s;
 }
-.ai-apply-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 255, 136, 0.35);
+.ai-apply-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0, 255, 136, 0.35); }
+.ecg-ai-rhythm-pill { background: rgba(255, 255, 255, 0.1); padding: 6px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.1); }
+
+/* ═══════════════════════════════════════════════════════════
+   APPLIED ANALYSIS BOX (UNDER MONITOR)
+   ═══════════════════════════════════════════════════════════ */
+.applied-analysis-box {
+  background: rgba(10, 20, 40, 0.85);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 16px;
+  margin: 16px 12px;
+  padding: 20px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.ecg-ai-rhythm-pill {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 0.82rem;
-  font-weight: 700;
+.applied-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  position: relative;
+}
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #00ff88;
+  border-radius: 50%;
+  animation: pulseDot 1.5s infinite;
+}
+@keyframes pulseDot { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,255,136,0.7); } 70% { transform: scale(1.2); box-shadow: 0 0 0 8px rgba(0,255,136,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,255,136,0); } }
+
+.applied-title-group { flex: 1; display: flex; flex-direction: column; }
+#applied-rhythm-label { font-weight: 700; font-size: 1rem; color: #fff; letter-spacing: -0.01em; }
+.applied-title-group small { font-size: 0.65rem; color: var(--modal-accent); opacity: 0.7; font-weight: 700; letter-spacing: 0.1em; margin-top: 2px; }
+
+/* ── Voice Assistant Button ─────────────────────────────────── */
+.voice-assistant-btn {
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+.voice-assistant-btn:hover { background: rgba(0, 255, 136, 0.15); border-color: #00ff88; transform: scale(1.1); }
+.voice-assistant-btn.speaking {
+  background: var(--modal-accent);
+  color: #000;
+  animation: voiceBreath 1.5s infinite;
+}
+@keyframes voiceBreath { 0% { box-shadow: 0 0 0 0 rgba(0,255,136,0.5); } 50% { box-shadow: 0 0 0 15px rgba(0,255,136,0); } 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0); } }
+
+.voice-wave { display: none; }
+.speaking .voice-wave { display: block; animation: wavePulse 1s infinite alternate; }
+@keyframes wavePulse { from { transform: scale(0.8); opacity: 0.5; } to { transform: scale(1.2); opacity: 1; } }
+
+/* ── Impact Chips ────────────────────────────────────────────── */
+.applied-impact { margin-bottom: 16px; }
+.applied-impact label { font-size: 0.65rem; font-weight: 700; color: rgba(255,255,255,0.4); letter-spacing: 0.1em; display: block; margin-bottom: 8px; }
+.applied-affected-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.applied-chip {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #f87171;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.applied-chip.normal { background: rgba(0, 255, 136, 0.1); border-color: rgba(0,255,136,0.3); color: #00ff88; }
+
+.applied-explanation-text {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.6);
+  padding: 12px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  border-left: 2px solid var(--modal-accent);
 }
 
-/* ───────── Overlay Panel (Shown beside heart) ─────────── */
-/* (Keeping for consistency but modal is main view) */
-.ecg-live-overlay {
-  display: none !important; /* Hide overlay if modal is open/done */
+.clear-applied-btn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.3);
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
 }
+.clear-applied-btn:hover { border-color: #f87171; color: #f87171; background: rgba(248, 113, 113, 0.05); }
