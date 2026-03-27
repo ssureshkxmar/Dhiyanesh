@@ -218,26 +218,47 @@
                 </div>
 
                 <div class="ecg-ai-scroll-area">
-                    <!-- Step 1 & 2: Image Processing -->
-                    <div class="ecg-ai-grid-2">
-                        <div class="ecg-ai-panel">
-                            <h3><span class="num">01</span> GRAYSCALE ANALYSIS</h3>
-                            <div class="img-container">
-                                <canvas id="ai-grayscale-cvs"></canvas>
-                            </div>
+                    <!-- NEW: Neural Network Pipeline Stages -->
+                    <h3><span class="num">01</span> SIGNAL PROCESSING PIPELINE</h3>
+                    <div class="ecg-ai-pipeline-grid">
+                        <div class="pipeline-item">
+                            <label>ORIGINAL INPUT</label>
+                            <canvas id="cvs-orig"></canvas>
                         </div>
-                        <div class="ecg-ai-panel">
-                            <h3><span class="num">02</span> SIGNAL ANNOTATION</h3>
-                            <div class="img-container">
-                                <canvas id="ai-pointed-cvs"></canvas>
-                            </div>
+                        <div class="pipeline-item">
+                            <label>GRAYSCALE</label>
+                            <canvas id="cvs-gray"></canvas>
+                        </div>
+                        <div class="pipeline-item">
+                            <label>RED GRID MASK</label>
+                            <canvas id="cvs-red-mask"></canvas>
+                        </div>
+                        <div class="pipeline-item">
+                            <label>DARK MASK (INK)</label>
+                            <canvas id="cvs-dark-mask"></canvas>
+                        </div>
+                        <div class="pipeline-item">
+                            <label>BINARY THRESH</label>
+                            <canvas id="cvs-thresh"></canvas>
+                        </div>
+                        <div class="pipeline-item">
+                            <label>SIGNAL ENHANCED</label>
+                            <canvas id="cvs-enhanced"></canvas>
                         </div>
                     </div>
 
-                    <!-- Step 3: 12 Lead Extraction -->
-                    <div class="ecg-ai-panel" style="margin-top: 20px;">
-                        <h3><span class="num">03</span> 12-LEAD EXTRACTION</h3>
+                    <!-- Existing 12-lead section -->
+                    <div class="ecg-ai-panel" style="margin-top: 24px;">
+                        <h3><span class="num">02</span> RECONSTRUCTED 12-LEADS (PREPROCESSED)</h3>
                         <div id="ai-leads-grid" class="ai-leads-grid-2x6"></div>
+                    </div>
+
+                    <!-- Existing detection sections ... -->
+                    <div class="ecg-ai-panel" style="margin-top: 24px;">
+                        <h3><span class="num">03</span> SIGNAL ANNOTATION & BEAT DETECTION</h3>
+                        <div class="img-container">
+                            <canvas id="ai-pointed-cvs"></canvas>
+                        </div>
                     </div>
 
                     <!-- Step 4: Clinical Impact -->

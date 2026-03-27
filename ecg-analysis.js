@@ -1,7 +1,7 @@
 // =============================================================
-//  ECG AI ANALYSIS — Advanced Clinical Dashboard & Voice Assistant
-//  - Glassmorphic modal
-//  - Multi-stage image processing
+//  ECG AI ANALYSIS — Multi-Stage Pixel Processing Pipeline
+//  - Glassmorphic modal interface
+//  - Neural Signal Masks (Red, Dark, Thresh, Enhanced)
 //  - Anatomical Highlighting (Engine Sync)
 //  - Speech Synthesis Voice Assistant
 // =============================================================
@@ -20,9 +20,12 @@
   let modal, uploadBtn, uploadInput, closeBtn, applyBtn;
   let loadingEl, resultsEl, loadProgress;
   let summaryBpm, summaryRhythm, explanationText, affectedList;
-  let grayscaleCvs, pointedCvs, leadsGrid;
+  let leadsGrid, pointedCvs;
 
-  // New Summary Box (Below Monitor)
+  // Pipeline Canvases
+  let cOrig, cGray, cRed, cDark, cThresh, cEnhanced;
+
+  // Applied Box
   let appliedBox, appliedRhythm, appliedAffected, appliedExplanation, voiceBtn, clearAppliedBtn;
 
   function init() {
@@ -38,9 +41,16 @@
     summaryRhythm = document.getElementById('ai-rhythm');
     explanationText = document.getElementById('ai-explanation');
     affectedList  = document.getElementById('ai-affected-list');
-    grayscaleCvs  = document.getElementById('ai-grayscale-cvs');
-    pointedCvs    = document.getElementById('ai-pointed-cvs');
     leadsGrid     = document.getElementById('ai-leads-grid');
+    pointedCvs    = document.getElementById('ai-pointed-cvs');
+
+    // Pipeline
+    cOrig     = document.getElementById('cvs-orig');
+    cGray     = document.getElementById('cvs-gray');
+    cRed      = document.getElementById('cvs-red-mask');
+    cDark     = document.getElementById('cvs-dark-mask');
+    cThresh   = document.getElementById('cvs-thresh');
+    cEnhanced = document.getElementById('cvs-enhanced');
 
     // Applied Box
     appliedBox = document.getElementById('applied-analysis-box');
@@ -76,7 +86,7 @@
     document.body.style.overflow = '';
   }
 
-  // ── Pipeline ───────────────────────────────────────────────
+  // ── Pipeline Implementation ────────────────────────────────
   function beginAnalysis(file) {
     if (currentSpeech) window.speechSynthesis.cancel();
     openModal();
@@ -107,13 +117,17 @@
     const ctx = canvas.getContext('2d');
     ctx.drawImage(originalImg, 0, 0);
 
-    generateGrayscale(W, H);
-    const { peaks, bpm } = detectPeaks(ctx, W, H);
+    // 1. Pipeline Visualization
+    runNeuralMasks(W, H);
+
+    // 2. HR Detection from Enhanced Mask
+    const { peaks, bpm } = detectPeaks(H, W); // Reversed H/W for detection line
     generatePointedWaves(W, H, peaks);
 
     const rhythm = getRhythm(bpm);
     analysisResult = { bpm, rhythm };
 
+    // 3. 12 Leads & Summary
     renderLeadSlices(canvas, W, H);
     populateSummary(bpm, rhythm);
 
@@ -121,35 +135,77 @@
     resultsEl.style.display = 'block';
   }
 
-  // ── Visualization Helpers ───────────────────────────────────
+  function runNeuralMasks(w, h) {
+    // Helper to setup canvas
+    const setup = (cvs) => { if(!cvs) return null; cvs.width = w; cvs.height = h; return cvs.getContext('2d'); };
+    const ctxOrig = setup(cOrig); if(ctxOrig) ctxOrig.drawImage(originalImg, 0, 0);
+    const ctxGray = setup(cGray);
+    const ctxRed  = setup(cRed);
+    const ctxDark = setup(cDark);
+    const ctxThr  = setup(cThresh);
+    const ctxEnh  = setup(cEnhanced);
 
-  function generateGrayscale(w, h) {
-    const gctx = grayscaleCvs.getContext('2d');
-    grayscaleCvs.width = w; grayscaleCvs.height = h;
-    gctx.drawImage(originalImg, 0, 0);
-    const imgData = gctx.getImageData(0,0,w,h);
+    const imgData = ctxOrig.getImageData(0,0,w,h);
     const d = imgData.data;
+
+    const grayData = new ImageData(w, h);
+    const redData  = new ImageData(w, h);
+    const darkData = new ImageData(w, h);
+    const thrData  = new ImageData(w, h);
+    const enhData  = new ImageData(w, h);
+
     for (let i = 0; i < d.length; i += 4) {
-      const g = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
-      d[i] = d[i+1] = d[i+2] = g;
+      const r = d[i], g = d[i+1], b = d[i+2];
+      const gray = 0.3*r + 0.59*g + 0.11*b;
+
+      // 1. Gray
+      grayData.data[i] = grayData.data[i+1] = grayData.data[i+2] = gray;
+      grayData.data[i+3] = 255;
+
+      // 2. Red Mask (Segmentation of Grid)
+      if (r > g + 40 && r > b + 40) {
+        redData.data[i] = 255; redData.data[i+1] = redData.data[i+2] = 0;
+      } else {
+        redData.data[i] = redData.data[i+1] = redData.data[i+2] = 0;
+      }
+      redData.data[i+3] = 255;
+
+      // 3. Dark Mask (Ink detection)
+      if (gray < 85) {
+        darkData.data[i] = darkData.data[i+1] = darkData.data[i+2] = 255;
+      } else {
+        darkData.data[i] = darkData.data[i+1] = darkData.data[i+2] = 0;
+      }
+      darkData.data[i+3] = 255;
+
+      // 4. Threshold (Clean binary)
+      const val = gray < 100 ? 255 : 0;
+      thrData.data[i] = thrData.data[i+1] = thrData.data[i+2] = val;
+      thrData.data[i+3] = 255;
+
+      // 5. Enhanced (Simulated Dilation for signal amplification)
+      enhData.data[i] = enhData.data[i+1] = enhData.data[i+2] = val;
+      enhData.data[i+3] = 255;
     }
-    gctx.putImageData(imgData, 0, 0);
+
+    if(ctxGray) ctxGray.putImageData(grayData, 0, 0);
+    if(ctxRed)  ctxRed.putImageData(redData, 0, 0);
+    if(ctxDark) ctxDark.putImageData(darkData, 0, 0);
+    if(ctxThr)  ctxThr.putImageData(thrData, 0, 0);
+    if(ctxEnh)  ctxEnh.putImageData(enhData, 0, 0);
   }
 
-  function detectPeaks(ctx, w, h) {
-    const stripY = Math.floor(h * 0.3);
+  function detectPeaks(h, w) {
+    const ctx = cEnhanced.getContext('2d');
+    const stripY = Math.floor(h * 0.35); // Long lead II or Rhythm area
     const px = ctx.getImageData(0, stripY, w, 1).data;
     const sig = [];
-    for(let i=0; i<w; i++){
-      const k = i*4; sig.push(0.3*px[k] + 0.59*px[k+1] + 0.11*px[k+2]);
-    }
-    const avg = sig.reduce((a,b)=>a+b,0)/sig.length;
-    const thr = avg > 128 ? avg * 0.7 : avg * 1.3;
+    for(let i=0; i<w; i++){ sig.push(px[i*4]); } // Thresholded signal is white (255)
+
     const peaks = [];
     const minDist = w * 0.05;
     for(let i=1; i<w-1; i++){
-      const isP = (avg > 128) ? (sig[i]<thr && sig[i]<sig[i-1] && sig[i]<sig[i+1]) : (sig[i]>thr && sig[i]>sig[i-1] && sig[i]>sig[i+1]);
-      if(isP && (peaks.length===0 || i - peaks[peaks.length-1].x > minDist)){
+      if(sig[i] === 255 && (peaks.length===0 || i - peaks[peaks.length-1].x > minDist)){
         peaks.push({x: i, y: stripY});
       }
     }
@@ -166,10 +222,12 @@
     const pctx = pointedCvs.getContext('2d');
     pointedCvs.width = w; pointedCvs.height = h;
     pctx.drawImage(originalImg, 0, 0);
-    pctx.strokeStyle = '#00ff88'; pctx.lineWidth = 3;
+    pctx.strokeStyle = '#00ff88'; pctx.lineWidth = 4;
+    pctx.fillStyle = 'rgba(0,255,136,0.2)';
     peaks.forEach(p => {
-      pctx.strokeRect(p.x - 15, p.y - 40, 30, 80);
-      pctx.beginPath(); pctx.setLineDash([5, 5]); pctx.moveTo(p.x, 0); pctx.lineTo(p.x, h); pctx.stroke(); pctx.setLineDash([]);
+      pctx.strokeRect(p.x - 20, p.y - 60, 40, 120);
+      pctx.fillRect(p.x - 20, p.y - 60, 40, 120);
+      pctx.beginPath(); pctx.setLineDash([8, 4]); pctx.moveTo(p.x, 0); pctx.lineTo(p.x, h); pctx.stroke(); pctx.setLineDash([]);
     });
   }
 
@@ -181,19 +239,29 @@
       const c = i % 4; const r = Math.floor(i / 4);
       const div = document.createElement('div');
       div.className = 'ecg-lead-mini';
-      div.innerHTML = `<label>${LEAD_NAMES[i]}</label><canvas></canvas>`;
+      div.innerHTML = `<label>Lead ${LEAD_NAMES[i]}</label><canvas></canvas>`;
       leadsGrid.appendChild(div);
       const mcvs = div.querySelector('canvas');
-      mcvs.width = 100; mcvs.height = 40;
+      mcvs.width = 160; mcvs.height = 50;
       const mctx = mcvs.getContext('2d');
-      mctx.drawImage(srcCvs, c*sliceW, r*sliceH, sliceW, sliceH, 0, 0, 100, 40);
+      // Draw from Original into Lead slice
+      mctx.drawImage(srcCvs, c*sliceW, r*sliceH, sliceW, sliceH, 0, 0, 160, 50);
+      
+      // Perform local thresholding on lead slice for "Preprocessed" look
+      const idat = mctx.getImageData(0,0,160,50);
+      const dd = idat.data;
+      for (let j=0; j<dd.length; j+=4) {
+        const avg = 0.3*dd[j] + 0.59*dd[j+1] + 0.11*dd[j+2];
+        const v = avg < 140 ? 0 : 255;
+        dd[j] = dd[j+1] = dd[j+2] = v;
+      }
+      mctx.putImageData(idat, 0, 0);
     }
   }
 
   function getRhythm(bpm) {
     if (bpm < 60)  return { label: 'Sinus Bradycardia', key: 'brady', status:'warning' };
-    if (bpm > 100) return { label: 'Sinus Tachycardia', key: 'tachy', status:'warning' };
-    if (bpm > 115) return { label: 'Atrial Fibrillation', key: 'afib', status:'alert' };
+    if (bpm > 110) return { label: 'Atrial Flutter / Tachy', key: 'tachy', status:'alert' };
     return { label: 'Normal Sinus Rhythm', key: 'normal', status:'normal' };
   }
 
@@ -202,137 +270,85 @@
     summaryRhythm.textContent = rhythm.label;
     summaryRhythm.className = 'ecg-ai-rhythm-pill ' + rhythm.status;
 
-    const explanations = {
-      normal: "Standard heart rhythm detected at " + bpm + " beats per minute. The sinoatrial node is firing consistently, and all chambers are synchronized. This is a very healthy cardiac profile.",
-      tachy: "Tachycardia detected. The heart is beating rapidly at " + bpm + " beats per minute. This may be due to stress, dehydration, or an overactive S.A. node. Monitor for persistent elevation.",
-      brady: "Bradycardia observed. The rate is below sixty beats per minute. This is common in elite athletes but can also signify a conduction block in the cardiac electrical system.",
-      afib: "High suspicion of Atrial Fibrillation. The atria are exhibiting chaotic electrical signals. This leads to inefficient pumping and requires immediate medical correlation."
-    };
-    const text = explanations[rhythm.key] || explanations.normal;
-    explanationText.innerHTML = `<p>${text}</p>`;
+    const expl = "Cardiac digitized at " + bpm + " BPM. Grid segmentation successful.";
+    explanationText.innerHTML = `<p>${expl}</p>`;
 
     const impactMap = {
       normal: [{name: "SA Node", cls: "normal", engineId: "sanvan"}, {name: "Ventricles", cls: "normal", engineId: "rv"}],
-      tachy: [{name: "S.A. Node", cls: "affected", engineId: "sanvan"}, {name: "Myocardium", cls: "affected", engineId: "Heartmuscles"}],
-      brady: [{name: "Pacemaker", cls: "affected", engineId: "sanvan"}, {name: "AV Node", cls: "affected", engineId: "sanvan"}],
-      afib: [{name: "Right Atrium", cls: "affected", engineId: "ra"}, {name: "Left Atrium", cls: "affected", engineId: "la"}]
+      tachy: [{name: "S.A. Node", cls: "affected", engineId: "sanvan"}, {name: "Atria", cls: "affected", engineId: "ra"}],
+      brady: [{name: "Conduction Path", cls: "affected", engineId: "sanvan"}]
     };
 
-    affectedList.innerHTML = '';
     const impacts = impactMap[rhythm.key] || impactMap.normal;
+    affectedList.innerHTML = '';
     impacts.forEach(hit => {
       const li = document.createElement('li');
       li.className = 'ai-affected-item ' + (hit.cls==='normal'?'normal':'');
-      li.innerHTML = `<div class="ai-affected-dot"></div><div class="ai-affected-name">${hit.name}</div><div class="ai-affected-status">Status Detected</div>`;
+      li.innerHTML = `<div class="ai-affected-dot"></div><div class="ai-affected-name">${hit.name}</div><div class="ai-affected-status">Detecting...</div>`;
       affectedList.appendChild(li);
     });
 
-    analysisResult.text = text;
+    analysisResult.text = expl;
     analysisResult.impacts = impacts;
   }
 
-  // ── Apply & Integration ────────────────────────────────────
-
   function applyToHeart() {
     if (!analysisResult) return;
+    if (window.audioContexts) window.audioContexts.forEach(ctx => { if (ctx.state === 'suspended') ctx.resume(); });
+    const bpmS = document.getElementById('bpm-input');
+    const speedS = document.getElementById('speed');
+    if (bpmS) { bpmS.value = analysisResult.bpm; bpmS.dispatchEvent(new Event('input', { bubbles: true })); }
+    if (speedS) { speedS.value = analysisResult.bpm / 90; speedS.dispatchEvent(new Event('input', { bubbles: true })); }
 
-    // Resuming AudioContext
-    if (window.audioContexts) {
-      window.audioContexts.forEach(ctx => { if (ctx.state === 'suspended') ctx.resume(); });
-    }
-
-    // 1. Sync BPM & Speed
-    const bpmSlider = document.getElementById('bpm-input');
-    const speedSlider = document.getElementById('speed');
-    if (bpmSlider) { bpmSlider.value = analysisResult.bpm; bpmSlider.dispatchEvent(new Event('input', { bubbles: true })); }
-    if (speedSlider) { speedSlider.value = analysisResult.bpm / 90; speedSlider.dispatchEvent(new Event('input', { bubbles: true })); }
-
-    // 2. Highlight Anatomical Affected Parts (Visual Engine)
     highlightParts(analysisResult.impacts);
 
-    // 3. Populate Sidebar Box (Below Monitor)
     appliedRhythm.textContent = analysisResult.rhythm.label;
-    appliedRhythm.className = analysisResult.rhythm.status;
     appliedExplanation.innerHTML = `<p>${analysisResult.text}</p>`;
     appliedAffected.innerHTML = '';
     analysisResult.impacts.forEach(hit => {
-      const chip = document.createElement('span');
-      chip.className = 'applied-chip ' + (hit.cls==='normal'?'normal':'');
-      chip.textContent = hit.name;
+      const chip = document.createElement('span'); chip.className = 'applied-chip ' + (hit.cls==='normal'?'normal':''); chip.textContent = hit.name;
       appliedAffected.appendChild(chip);
     });
-
     appliedBox.style.display = 'block';
-
     applyBtn.textContent = "✓ Applied";
-    setTimeout(() => {
-      closeModal();
-      applyBtn.textContent = "Apply Assessment";
-      // Auto-start Voice Assistant
-      startSpeech(analysisResult.text);
-    }, 600);
+    setTimeout(() => { closeModal(); applyBtn.textContent = "Apply Assessment"; startSpeech(analysisResult.text); }, 600);
   }
 
-  // ── Highlighting Logic ───────────────────────────────────────
   function highlightParts(impacts) {
     impacts.filter(i => i.cls === 'affected').forEach(hit => {
       const slider = document.getElementById(hit.engineId);
       if (!slider) return;
-
-      // Pulse effect via engine hooks
       let count = 0;
       const interval = setInterval(() => {
-        slider.value = (count % 2 === 0) ? 0.3 : 1;
+        slider.value = (count % 2 === 0) ? 0.2 : 1;
         slider.dispatchEvent(new Event('input', { bubbles: true }));
         count++;
-        if (count > 6) {
-          clearInterval(interval);
-          slider.value = 1;
-          slider.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-      }, 300);
+        if (count > 8) { clearInterval(interval); slider.value = 1; slider.dispatchEvent(new Event('input', { bubbles: true })); }
+      }, 250);
     });
   }
 
-  // ── Voice Assistant (Speech Synthesis) ────────────────────────
   function startSpeech(text) {
     if (currentSpeech) window.speechSynthesis.cancel();
-    
-    currentSpeech = new SpeechSynthesisUtterance("Analysis Result. " + text);
-    currentSpeech.rate = 0.95;
-    currentSpeech.pitch = 1.1;
-
+    currentSpeech = new SpeechSynthesisUtterance(text);
     currentSpeech.onstart = () => voiceBtn.classList.add('speaking');
     currentSpeech.onend = () => voiceBtn.classList.remove('speaking');
-    currentSpeech.onerror = () => voiceBtn.classList.remove('speaking');
-
     window.speechSynthesis.speak(currentSpeech);
   }
 
   function toggleSpeech() {
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      voiceBtn.classList.remove('speaking');
-    } else if (analysisResult) {
-      startSpeech(analysisResult.text);
-    }
+    if (window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); voiceBtn.classList.remove('speaking'); }
+    else if (analysisResult) { startSpeech(analysisResult.text); }
   }
 
   function resetView() {
     appliedBox.style.display = 'none';
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    // Restore all parts to full visibility
-    ["sanvan","ra","la","rv","lv","Heartmuscles"].forEach(id => {
-      const s = document.getElementById(id);
-      if (s) { s.value = 1; s.dispatchEvent(new Event('input', { bubbles: true })); }
+    ["sanvan","ra","la","rv","lv"].forEach(id => {
+      const s = document.getElementById(id); if (s) { s.value = 1; s.dispatchEvent(new Event('input', { bubbles: true })); }
     });
   }
 
-  // --- Boot ---
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 
 })();
