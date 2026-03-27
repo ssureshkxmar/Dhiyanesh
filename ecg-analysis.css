@@ -1,0 +1,277 @@
+/* ================================================================
+   ECG Analysis — Right-Panel Integrated Styles
+   All analysis results live BELOW the existing ECG canvas
+   in the .right-monitor panel. No modal needed.
+   ================================================================ */
+
+/* ── Upload button: green pulse ─────────────────────────────── */
+@keyframes ecgBtnPulse {
+  0%   { box-shadow: 0 0 0 0   rgba(0,200,100,0.6); }
+  70%  { box-shadow: 0 0 0 10px rgba(0,200,100,0);   }
+  100% { box-shadow: 0 0 0 0   rgba(0,200,100,0);    }
+}
+.ecg-upload-pulse {
+  background: linear-gradient(135deg,#00b86b,#008a4e) !important;
+  border: 1px solid rgba(0,255,136,0.35) !important;
+  animation: ecgBtnPulse 2.2s ease-out infinite;
+}
+.ecg-upload-pulse:hover {
+  background: linear-gradient(135deg,#00ff88,#00c869) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0,255,136,0.35) !important;
+  animation: none;
+}
+
+/* Right monitor expansion is handled in custom-style.css */
+
+/* ── Loading row ─────────────────────────────────────────────── */
+.ecg-panel-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 10px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.5);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+@keyframes panelSpin {
+  to { transform: rotate(360deg); }
+}
+.ecg-panel-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0,255,136,0.15);
+  border-top-color: #00ff88;
+  border-radius: 50%;
+  animation: panelSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Loading steps mini pills */
+.ecg-load-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 14px 10px;
+}
+.ecg-load-step {
+  font-size: 0.62rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.25);
+  transition: all 0.3s;
+}
+.ecg-load-step.active {
+  color: #00ff88;
+  border-color: rgba(0,255,136,0.4);
+  background: rgba(0,255,136,0.08);
+}
+
+/* ── Results panel ───────────────────────────────────────────── */
+@keyframes panelSlideDown {
+  from { opacity:0; transform: translateY(-8px); }
+  to   { opacity:1; transform: translateY(0);    }
+}
+.ecg-panel-results {
+  animation: panelSlideDown 0.35s ease both;
+  border-top: 1px solid rgba(0,255,136,0.15);
+}
+
+/* ── Summary row (HR + Rhythm) ───────────────────────────────── */
+.ecg-panel-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+  background: rgba(0,255,136,0.04);
+}
+.ecg-panel-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ecg-pm-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.35);
+  font-weight: 600;
+}
+.ecg-pm-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.ecg-pm-big {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #00ff88;
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(0,255,136,0.45);
+  font-variant-numeric: tabular-nums;
+}
+.ecg-pm-unit {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.4);
+}
+
+/* ── Rhythm chips ────────────────────────────────────────────── */
+.ecg-rhythm-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.chip-normal  { color:#00ff88; background:rgba(0,255,136,0.1);  border:1px solid rgba(0,255,136,0.3); }
+.chip-warn    { color:#fbbf24; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); }
+.chip-alert   { color:#f87171; background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3); }
+
+/* ── Apply button ────────────────────────────────────────────── */
+.ecg-panel-apply {
+  width: calc(100% - 28px);
+  margin: 6px 14px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg,#059669,#007a50);
+  color: #fff;
+  border: none;
+  padding: 10px 0;
+  border-radius: 8px;
+  font-size: 0.83rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+  font-family: inherit;
+  box-shadow: 0 4px 16px rgba(0,180,90,0.2);
+}
+.ecg-panel-apply:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.ecg-panel-apply:not(:disabled):hover {
+  background: linear-gradient(135deg,#00ff88,#00c869);
+  color: #001a0d;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(0,255,136,0.35);
+}
+.ecg-panel-apply.btn-applied {
+  background: linear-gradient(135deg,#00ff88,#00c869) !important;
+  color: #001a0d !important;
+}
+
+/* ── Section divider ─────────────────────────────────────────── */
+.ecg-panel-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 6px;
+}
+.ecg-panel-divider::before,
+.ecg-panel-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+}
+.ecg-panel-divider span {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: rgba(0,255,136,0.5);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── 12-Lead mini grid (2 columns) ──────────────────────────── */
+.ecg-leads-grid-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  padding: 0 10px 6px;
+}
+.lead-mini-card {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(0,255,136,0.1);
+  border-radius: 5px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.lead-mini-card:hover {
+  border-color: rgba(0,255,136,0.35);
+}
+/* Rhythm strip spans full width */
+.lead-mini-full {
+  grid-column: 1 / -1;
+}
+.lead-mini-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: rgba(0,255,136,0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 6px 2px;
+  background: rgba(0,255,136,0.04);
+  border-bottom: 1px solid rgba(0,255,136,0.07);
+}
+.lead-mini-canvas {
+  display: block;
+  width: 100%;
+  height: 44px;
+  image-rendering: crisp-edges;
+}
+.lead-mini-full .lead-mini-canvas {
+  height: 32px;
+}
+
+/* ── Explanation text ────────────────────────────────────────── */
+.ecg-panel-explanation {
+  margin: 0 10px 8px;
+  padding: 12px 14px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(0,255,136,0.1);
+  border-left: 3px solid rgba(0,255,136,0.4);
+  border-radius: 6px;
+  font-size: 0.76rem;
+  line-height: 1.65;
+  color: rgba(255,255,255,0.68);
+}
+.ecg-panel-explanation p {
+  margin: 0 0 10px 0;
+}
+.ecg-panel-explanation p:last-child { margin-bottom:0; }
+.ecg-panel-explanation strong {
+  color: rgba(255,255,255,0.92);
+  font-weight: 600;
+}
+.ecg-panel-explanation em {
+  color: rgba(0,255,136,0.8);
+  font-style: normal;
+  font-weight: 500;
+}
+
+/* ── Clear button ────────────────────────────────────────────── */
+.ecg-panel-clear {
+  width: calc(100% - 20px);
+  margin: 4px 10px 14px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.3);
+  border-radius: 6px;
+  padding: 7px 0;
+  font-size: 0.72rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.ecg-panel-clear:hover {
+  border-color: rgba(255,80,80,0.4);
+  color: #f87171;
+  background: rgba(255,80,80,0.06);
+}

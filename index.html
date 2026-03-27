@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="./custom-style.css" rel="stylesheet" />
+    <link href="./ecg-analysis.css" rel="stylesheet" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <title>Clinical Heart Viewer</title>
+</head>
+
+<body>
+
+    <!-- Minimal Header -->
+    <header class="clinical-header">
+        <div class="logo">CLINICAL<span class="logo-bold">VIEW</span></div>
+        <div class="header-actions">
+            <button id="upload-ecg-btn" class="action-btn ecg-upload-pulse">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Upload ECG
+            </button>
+            <input type="file" id="ecg-upload-input" style="display: none;" accept="image/*">
+            <div class="header-status">LIVE HEART</div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="app-layout">
+        <!-- 3D Viewport -->
+        <div id="viewer-area">
+            <div id="canvas-container"></div>
+
+            <!-- Side Controller (Middle Right — BPM + View Mode) -->
+            <div class="side-controller">
+                <div class="control-group" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <label style="font-weight: 500; color: #fff; margin-bottom: 0;">Heart Rate</label>
+                        <button id="mute-btn" class="icon-btn" title="Mute Audio">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                                <path id="sound-waves" d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="slider-row">
+                        <input type="range" id="bpm-input" min="40" max="180" step="1" value="72" />
+                        <span id="bpm-display" style="min-width: 3ch; text-align: right; margin-left:8px; font-weight:600; color:var(--accent-color);">72</span>
+                        <span style="font-size: 0.8em; color: rgba(255,255,255,0.5); margin-left: 2px;">BPM</span>
+                    </div>
+                </div>
+                <!-- Hidden Engine Control -->
+                <input type="range" id="speed" min="0" max="2" step="0.01" value="0.8" style="display:none;" />
+                <!-- View Mode -->
+                <div class="view-mode-bar">
+                    <button class="mode-btn active" data-mode="standard">Standard</button>
+                    <button class="mode-btn" data-mode="wireframe">Wireframe</button>
+                </div>
+                <!-- Hover Label -->
+                <div id="hover-label" class="bottom-label-box">
+                    Hovering: <span id="part-name">None</span>
+                </div>
+            </div>
+
+            <!-- Sidebar Controls (Left) -->
+            <aside class="left-controls">
+                <div class="sidebar-section">
+                    <h3 class="section-title">Global Settings</h3>
+                    <div class="control-group">
+                        <label>Blood Flow Loop</label>
+                        <label class="switch">
+                            <input type="checkbox" id="modelToggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="control-group">
+                        <label>Opacity Level</label>
+                        <select id="opacitySlider">
+                            <option value="1">100%</option>
+                            <option value="0.75">75%</option>
+                            <option value="0.5">50%</option>
+                            <option value="0.25">25%</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <h3 class="section-title">Anatomy</h3>
+                    <div class="control-group"><label>Muscle Tissue</label><div class="slider-row"><input type="range" id="Heartmuscles" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="Heartmuscles" title="Toggle Visibility"></button></div></div>
+                    <div class="control-group"><label>SA/AV Nodes</label><div class="slider-row"><input type="range" id="sanvan" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="sanvan" title="Toggle Visibility"></button></div></div>
+                    <div class="control-group"><label>Internal Struct</label><div class="slider-row"><input type="range" id="internal" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="internal" title="Toggle Visibility"></button></div></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3 class="section-title">Vascular System</h3>
+                    <div class="control-group"><label>Large Vessels</label><div class="slider-row"><input type="range" id="Largevessels" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="Largevessels" title="Toggle Visibility"></button></div></div>
+                    <div class="control-group"><label>Small Vessels</label><div class="slider-row"><input type="range" id="Smallvessels" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="Smallvessels" title="Toggle Visibility"></button></div></div>
+                    <div class="control-group"><label>Sup. Vena Cava</label><div class="slider-row"><input type="range" id="SVenaCava" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="SVenaCava" title="Toggle Visibility"></button></div></div>
+                    <div class="control-group"><label>Inf. Vena Cava</label><div class="slider-row"><input type="range" id="IVenaCava" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="IVenaCava" title="Toggle Visibility"></button></div></div>
+                    <div class="control-group"><label>Pulmonary</label><div class="slider-row"><input type="range" id="Pulmonaryvessels" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="Pulmonaryvessels" title="Toggle Visibility"></button></div></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3 class="section-title">Chambers</h3>
+                    <div class="control-group"><label>L-Atrium</label><div class="slider-row"><input type="range" id="la" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="la" title="Toggle Visibility"></button></div></div>
+                    <div class="control-group"><label>R-Atrium</label><div class="slider-row"><input type="range" id="ra" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="ra" title="Toggle Visibility"></button></div></div>
+                    <div class="control-group"><label>L-Ventricle</label><div class="slider-row"><input type="range" id="lv" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="lv" title="Toggle Visibility"></button></div></div>
+                    <div class="control-group"><label>R-Ventricle</label><div class="slider-row"><input type="range" id="rv" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="rv" title="Toggle Visibility"></button></div></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3 class="section-title">Valves</h3>
+                    <div class="control-group"><label>Mitral</label><div class="slider-row"><input type="range" id="bicuspid" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="bicuspid" title="Toggle Visibility"></button></div></div>
+                    <div class="control-group"><label>Tricuspid</label><div class="slider-row"><input type="range" id="tricuspid" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="tricuspid" title="Toggle Visibility"></button></div></div>
+                    <div class="control-group"><label>General</label><div class="slider-row"><input type="range" id="valves" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="valves" title="Toggle Visibility"></button></div></div>
+                </div>
+            </aside>
+
+            <!-- ═══════════════════════════════════════════════════════
+                 RIGHT PANEL — ECG Monitor + Analysis Results (combined)
+                 ═══════════════════════════════════════════════════════ -->
+            <div class="right-monitor" id="right-panel">
+
+                <!-- ① Live ECG waveform (always visible) -->
+                <div class="sidebar-monitor">
+                    <div class="monitor-header">
+                        <span>ECG MONITOR</span>
+                        <span id="ecg-bpm-val" class="bpm-text">--</span>
+                        <small>BPM</small>
+                    </div>
+                    <canvas id="ecg-canvas" height="100"></canvas>
+                </div>
+
+                <!-- ② Analysis Loading indicator (hidden until upload) -->
+                <div id="ecg-panel-loading" class="ecg-panel-loading" style="display:none;">
+                    <div class="ecg-panel-spinner"></div>
+                    <span>Analysing ECG…</span>
+                </div>
+                <div id="ecg-load-step-bar" class="ecg-load-steps" style="display:none;">
+                    <span class="ecg-load-step">Digitising</span>
+                    <span class="ecg-load-step">Leads</span>
+                    <span class="ecg-load-step">HR Predict</span>
+                    <span class="ecg-load-step">Rhythm</span>
+                </div>
+
+                <!-- ③ Analysis Results panel (hidden until done) -->
+                <div id="ecg-panel-results" class="ecg-panel-results" style="display:none;">
+
+                    <!-- HR + Rhythm summary -->
+                    <div class="ecg-panel-summary">
+                        <div class="ecg-panel-metric">
+                            <span class="ecg-pm-label">Heart Rate</span>
+                            <div class="ecg-pm-val-row">
+                                <span id="panel-bpm" class="ecg-pm-big">--</span>
+                                <span class="ecg-pm-unit">BPM</span>
+                            </div>
+                        </div>
+                        <div class="ecg-panel-metric">
+                            <span class="ecg-pm-label">Rhythm</span>
+                            <span id="panel-rhythm" class="ecg-rhythm-chip">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Apply button -->
+                    <button id="ecg-apply-btn" class="ecg-panel-apply" disabled>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        </svg>
+                        Apply to Heart
+                    </button>
+
+                    <!-- Divider -->
+                    <div class="ecg-panel-divider">
+                        <span>12-LEAD SEPARATION</span>
+                    </div>
+
+                    <!-- 12 Lead mini canvases (2×6 grid) -->
+                    <div id="ecg-leads-grid" class="ecg-leads-grid-panel"></div>
+
+                    <!-- Divider -->
+                    <div class="ecg-panel-divider">
+                        <span>CARDIAC FUNCTION</span>
+                    </div>
+
+                    <!-- Explanation text -->
+                    <div id="ecg-ai-explanation" class="ecg-panel-explanation"></div>
+
+                    <!-- Clear button -->
+                    <button id="ecg-clear-btn" class="ecg-panel-clear">✕ Clear Analysis</button>
+
+                </div>
+                <!-- /Analysis Results -->
+
+            </div>
+            <!-- /Right Panel -->
+
+        </div>
+        <!-- /viewer-area -->
+    </main>
+
+    <!-- Legacy Engine Hooks -->
+    <div style="display:none;">
+        <div id="wait-screen"></div>
+        <input id="analysisFrame" />
+        <div id="analysisMode"></div>
+        <div id="patient-cycle-img"></div>
+        <div id="patient-thickness-img"></div>
+        <div id="analysis-grid"></div>
+    </div>
+
+    <!-- SVG Filters -->
+    <svg style="display: none; height: 0; width: 0; position: absolute;">
+        <defs>
+            <filter id="svg-wireframe">
+                <feConvolveMatrix order="3" kernelMatrix="-1 -1 -1 -1 8 -1 -1 -1 -1" preserveAlpha="true" result="edges" />
+                <feColorMatrix in="edges" type="matrix" values="0   0   0   0   0
+                                                                1.5 1.5 1.5 0   0
+                                                                2.5 2.5 2.5 0   0
+                                                                0   0   0   1   0" />
+            </filter>
+        </defs>
+    </svg>
+
+    <script type="module" crossorigin src="./assets/index-928b963b.js"></script>
+    <script src="./custom-ui.js" defer></script>
+    <script src="./ecg-analysis.js" defer></script>
+</body>
+
+</html>
