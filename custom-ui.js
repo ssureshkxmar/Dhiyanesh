@@ -577,80 +577,9 @@ function initInteraction() {
     });
 }
 
-// --- ECG Upload & Analysis Logic ---
+// --- Moved to ecg-analysis.js ---
 function initECGUpload() {
-    const uploadBtn = document.getElementById('upload-ecg-btn');
-    const uploadInput = document.getElementById('ecg-upload-input');
-    const modal = document.getElementById('ecg-modal');
-    const closeBtn = document.getElementById('close-ecg-modal');
-    const loadingState = document.getElementById('ecg-loading');
-    const resultsState = document.getElementById('ecg-results');
-    const predictionText = document.getElementById('prediction-text');
-
-    if (!uploadBtn || !uploadInput || !modal) return;
-
-    uploadBtn.addEventListener('click', () => uploadInput.click());
-
-    closeBtn.addEventListener('click', () => {
-        modal.classList.remove('active');
-    });
-
-    uploadInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // Reset and Show Modal
-        modal.classList.add('active');
-        loadingState.style.display = 'flex';
-        resultsState.style.display = 'none';
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            // Adjust the URL if your FastAPI server is on a different port or host
-            const response = await fetch('http://127.0.0.1:8004/predict-ecg', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) throw new Error('Analysis failed');
-
-            const data = await response.json();
-
-            // Populate Results
-            predictionText.innerText = data.prediction;
-
-            // Map images
-            if (data.images.original) document.getElementById('res-original').src = data.images.original;
-            if (data.images.grayscale) document.getElementById('res-grayscale').src = data.images.grayscale;
-            if (data.images.leads) document.getElementById('res-leads').src = data.images.leads;
-            if (data.images.long_lead) document.getElementById('res-long-lead').src = data.images.long_lead;
-            if (data.images.preprocessed) document.getElementById('res-preprocessed').src = data.images.preprocessed;
-            if (data.images.preprocessed_long) document.getElementById('res-preprocessed-long').src = data.images.preprocessed_long;
-            if (data.images.contours) document.getElementById('res-contours').src = data.images.contours;
-
-            // Populate Data Tables
-            const formatData = (obj) => {
-                if (!obj || obj.length === 0) return 'No data available';
-                // Create a scrollable pre-formatted block for the data preview
-                return `<pre>${JSON.stringify(obj, null, 2)}</pre>`;
-            };
-
-            document.getElementById('res-signal-data').innerHTML = formatData(data.signal_1d);
-            document.getElementById('res-pca-data').innerHTML = formatData(data.dimensional_reduction);
-
-            loadingState.style.display = 'none';
-            resultsState.style.display = 'block';
-
-        } catch (error) {
-            console.error('ECG Analysis Error:', error);
-            alert('Error during ECG analysis. Please ensure the backend server is running.');
-            modal.classList.remove('active');
-        } finally {
-            uploadInput.value = ''; // Reset input
-        }
-    });
+    // Logic migrated to specialized digitizer module.
 }
 
 document.addEventListener('DOMContentLoaded', () => {
