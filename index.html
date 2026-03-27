@@ -218,40 +218,36 @@
                 </div>
 
                 <div class="ecg-ai-scroll-area">
-                    <!-- NEW: Neural Network Pipeline Stages -->
-                    <h3><span class="num">01</span> SIGNAL PROCESSING PIPELINE</h3>
-                    <div class="ecg-ai-pipeline-grid">
-                        <div class="pipeline-item"><label>ORIGINAL</label><canvas id="cvs-orig"></canvas></div>
-                        <div class="pipeline-item"><label>GRAYSCALE</label><canvas id="cvs-gray"></canvas></div>
-                        <div class="pipeline-item"><label>RED MASK</label><canvas id="cvs-red-mask"></canvas></div>
-                        <div class="pipeline-item"><label>INK MASK</label><canvas id="cvs-dark-mask"></canvas></div>
-                        <div class="pipeline-item"><label>THRESH</label><canvas id="cvs-thresh"></canvas></div>
-                        <div class="pipeline-item"><label>ENHANCED</label><canvas id="cvs-enhanced"></canvas></div>
+                    <!-- Production AI Signal Pipeline -->
+                    <h3><span class="num">01</span> SIGNAL ACQUISITION & PROCESSING PIPELINE</h3>
+                    <div class="ecg-ai-grid-2">
+                        <div class="ecg-ai-panel">
+                            <label class="pipeline-tag">GRAYSCALE SCALE</label>
+                            <img id="res-gray" class="pipeline-img-full" src="" alt="Grayscale" />
+                        </div>
+                        <div class="ecg-ai-panel">
+                            <label class="pipeline-tag">DIVIDED 12-LEADS (RAW)</label>
+                            <img id="res-leads" class="pipeline-img-full" src="" alt="Leads Raw" />
+                        </div>
+                        <div class="ecg-ai-panel">
+                            <label class="pipeline-tag">PREPROCESSED / CLEANED</label>
+                            <img id="res-pre" class="pipeline-img-full" src="" alt="Leads Clean" />
+                        </div>
+                        <div class="ecg-ai-panel">
+                            <label class="pipeline-tag">SIGNAL CONTOUR ANALYTICS</label>
+                            <img id="res-contours" class="pipeline-img-full" src="" alt="Contours" />
+                        </div>
                     </div>
 
-                    <!-- Clinical Findings & Impact (Moved Up) -->
+                    <!-- Clinical Assessment -->
                     <div class="ecg-ai-grid-2" style="margin-top: 24px;">
                         <div class="ecg-ai-panel">
-                            <h3><span class="num">02</span> CLINICAL SUMMARY</h3>
+                            <h3><span class="num">02</span> AI DIAGNOSTIC REPORT</h3>
                             <div id="ai-explanation" class="ecg-ai-explanation-text"></div>
                         </div>
                         <div class="ecg-ai-panel">
                             <h3><span class="num">03</span> PHARMACO-PHYSIOLOGICAL IMPACT</h3>
                             <ul id="ai-affected-list" class="ai-affected-list"></ul>
-                        </div>
-                    </div>
-
-                    <!-- 12-Leads Section -->
-                    <div class="ecg-ai-panel" style="margin-top: 24px;">
-                        <h3><span class="num">04</span> RECONSTRUCTED 12-LEADS (PREPROCESSED)</h3>
-                        <div id="ai-leads-grid" class="ai-leads-grid-2x6"></div>
-                    </div>
-
-                    <!-- Detection Overlay -->
-                    <div class="ecg-ai-panel" style="margin-top: 24px;">
-                        <h3><span class="num">05</span> SIGNAL ANNOTATION & PEAK DETECTION</h3>
-                        <div class="img-container">
-                            <canvas id="ai-pointed-cvs"></canvas>
                         </div>
                     </div>
                 </div>
