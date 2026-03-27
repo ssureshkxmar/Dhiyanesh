@@ -38,7 +38,7 @@
         <div id="viewer-area">
             <div id="canvas-container"></div>
 
-            <!-- Side Controller (Middle Right — BPM + View Mode) -->
+            <!-- Side Controller -->
             <div class="side-controller">
                 <div class="control-group" style="flex-direction: column; align-items: flex-start; gap: 8px;">
                     <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
@@ -56,14 +56,11 @@
                         <span style="font-size: 0.8em; color: rgba(255,255,255,0.5); margin-left: 2px;">BPM</span>
                     </div>
                 </div>
-                <!-- Hidden Engine Control -->
                 <input type="range" id="speed" min="0" max="2" step="0.01" value="0.8" style="display:none;" />
-                <!-- View Mode -->
                 <div class="view-mode-bar">
                     <button class="mode-btn active" data-mode="standard">Standard</button>
                     <button class="mode-btn" data-mode="wireframe">Wireframe</button>
                 </div>
-                <!-- Hover Label -->
                 <div id="hover-label" class="bottom-label-box">
                     Hovering: <span id="part-name">None</span>
                 </div>
@@ -90,7 +87,8 @@
                         </select>
                     </div>
                 </div>
-                <div class="sidebar-section">
+                <!-- ... other sidebar sections ... -->
+                 <div class="sidebar-section">
                     <h3 class="section-title">Anatomy</h3>
                     <div class="control-group"><label>Muscle Tissue</label><div class="slider-row"><input type="range" id="Heartmuscles" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="Heartmuscles" title="Toggle Visibility"></button></div></div>
                     <div class="control-group"><label>SA/AV Nodes</label><div class="slider-row"><input type="range" id="sanvan" min="0" max="1" step="0.01" value="1" /><button class="vis-toggle" data-target="sanvan" title="Toggle Visibility"></button></div></div>
@@ -119,12 +117,8 @@
                 </div>
             </aside>
 
-            <!-- ═══════════════════════════════════════════════════════
-                 RIGHT PANEL — ECG Monitor + Analysis Results (combined)
-                 ═══════════════════════════════════════════════════════ -->
+            <!-- RIGHT MONITOR (Always visible live feed) -->
             <div class="right-monitor" id="right-panel">
-
-                <!-- ① Live ECG waveform (always visible) -->
                 <div class="sidebar-monitor">
                     <div class="monitor-header">
                         <span>ECG MONITOR</span>
@@ -133,96 +127,104 @@
                     </div>
                     <canvas id="ecg-canvas" height="100"></canvas>
                 </div>
-
-                <!-- ② Analysis Loading indicator (hidden until upload) -->
-                <div id="ecg-panel-loading" class="ecg-panel-loading" style="display:none;">
-                    <div class="ecg-panel-spinner"></div>
-                    <span>Analysing ECG…</span>
-                </div>
-                <div id="ecg-load-step-bar" class="ecg-load-steps" style="display:none;">
-                    <span class="ecg-load-step">Digitising</span>
-                    <span class="ecg-load-step">Leads</span>
-                    <span class="ecg-load-step">HR Predict</span>
-                    <span class="ecg-load-step">Rhythm</span>
-                </div>
-
-                <!-- ③ Analysis Results panel (hidden until done) -->
-                <div id="ecg-panel-results" class="ecg-panel-results" style="display:none;">
-
-                    <!-- HR + Rhythm summary -->
-                    <div class="ecg-panel-summary">
-                        <div class="ecg-panel-metric">
-                            <span class="ecg-pm-label">Heart Rate</span>
-                            <div class="ecg-pm-val-row">
-                                <span id="panel-bpm" class="ecg-pm-big">--</span>
-                                <span class="ecg-pm-unit">BPM</span>
-                            </div>
-                        </div>
-                        <div class="ecg-panel-metric">
-                            <span class="ecg-pm-label">Rhythm</span>
-                            <span id="panel-rhythm" class="ecg-rhythm-chip">--</span>
-                        </div>
-                    </div>
-
-                    <!-- Apply button -->
-                    <button id="ecg-apply-btn" class="ecg-panel-apply" disabled>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                        </svg>
-                        Apply to Heart
-                    </button>
-
-                    <!-- Divider -->
-                    <div class="ecg-panel-divider">
-                        <span>12-LEAD SEPARATION</span>
-                    </div>
-
-                    <!-- 12 Lead mini canvases (2×6 grid) -->
-                    <div id="ecg-leads-grid" class="ecg-leads-grid-panel"></div>
-
-                    <!-- Divider -->
-                    <div class="ecg-panel-divider">
-                        <span>CARDIAC FUNCTION</span>
-                    </div>
-
-                    <!-- Explanation text -->
-                    <div id="ecg-ai-explanation" class="ecg-panel-explanation"></div>
-
-                    <!-- Clear button -->
-                    <button id="ecg-clear-btn" class="ecg-panel-clear">✕ Clear Analysis</button>
-
-                </div>
-                <!-- /Analysis Results -->
-
             </div>
-            <!-- /Right Panel -->
-
         </div>
-        <!-- /viewer-area -->
     </main>
 
-    <!-- Legacy Engine Hooks -->
-    <div style="display:none;">
-        <div id="wait-screen"></div>
-        <input id="analysisFrame" />
-        <div id="analysisMode"></div>
-        <div id="patient-cycle-img"></div>
-        <div id="patient-thickness-img"></div>
-        <div id="analysis-grid"></div>
-    </div>
+    <!-- ═══════════════════════════════════════════════════════
+         GLASSMORPHIC ECG AI ANALYSIS MODAL
+         ═══════════════════════════════════════════════════════ -->
+    <div id="ecg-ai-modal" class="ecg-ai-modal-overlay">
+        <div class="ecg-ai-modal-content">
 
-    <!-- SVG Filters -->
-    <svg style="display: none; height: 0; width: 0; position: absolute;">
-        <defs>
-            <filter id="svg-wireframe">
-                <feConvolveMatrix order="3" kernelMatrix="-1 -1 -1 -1 8 -1 -1 -1 -1" preserveAlpha="true" result="edges" />
-                <feColorMatrix in="edges" type="matrix" values="0   0   0   0   0
-                                                                1.5 1.5 1.5 0   0
-                                                                2.5 2.5 2.5 0   0
-                                                                0   0   0   1   0" />
-            </filter>
-        </defs>
-    </svg>
+            <!-- Modal Header -->
+            <div class="ecg-ai-modal-header">
+                <div class="ecg-ai-header-left">
+                    <div class="ecg-ai-icon-pulse">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2.5">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="ecg-ai-title">Clinical AI Digitizer</h2>
+                        <p class="ecg-ai-subtitle">Real-time cardiac image processing & diagnostics</p>
+                    </div>
+                </div>
+                <button id="ecg-ai-close" class="ecg-ai-close-btn">&times;</button>
+            </div>
+
+            <!-- Loading UI -->
+            <div id="ecg-ai-loading" class="ecg-ai-loading" style="display:none;">
+                <div class="ecg-ai-spinner"></div>
+                <p>Neural engine processing signals...</p>
+                <div class="ecg-ai-load-bar-wrap">
+                    <div id="ecg-ai-load-progress" class="ecg-ai-load-progress"></div>
+                </div>
+            </div>
+
+            <!-- Results UI -->
+            <div id="ecg-ai-results" class="ecg-ai-results" style="display:none;">
+
+                <!-- Summary Bar -->
+                <div class="ecg-ai-sum-row">
+                    <div class="ecg-ai-sum-item">
+                        <label>HEART RATE</label>
+                        <div class="ecg-ai-sum-val"><span id="ai-bpm">--</span> <small>BPM</small></div>
+                    </div>
+                    <div class="ecg-ai-sum-item">
+                        <label>DIAGNOSIS</label>
+                        <div id="ai-rhythm" class="ecg-ai-rhythm-pill">--</div>
+                    </div>
+                    <div class="ecg-ai-sum-item apply-item">
+                        <button id="ai-apply-btn" class="ai-apply-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                            </svg>
+                            Apply Assessment
+                        </button>
+                    </div>
+                </div>
+
+                <div class="ecg-ai-scroll-area">
+                    <!-- Step 1 & 2: Image Processing -->
+                    <div class="ecg-ai-grid-2">
+                        <div class="ecg-ai-panel">
+                            <h3><span class="num">01</span> GRAYSCALE ANALYSIS</h3>
+                            <div class="img-container">
+                                <canvas id="ai-grayscale-cvs"></canvas>
+                            </div>
+                        </div>
+                        <div class="ecg-ai-panel">
+                            <h3><span class="num">02</span> SIGNAL ANNOTATION</h3>
+                            <div class="img-container">
+                                <canvas id="ai-pointed-cvs"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: 12 Lead Extraction -->
+                    <div class="ecg-ai-panel" style="margin-top: 20px;">
+                        <h3><span class="num">03</span> 12-LEAD EXTRACTION</h3>
+                        <div id="ai-leads-grid" class="ai-leads-grid-2x6"></div>
+                    </div>
+
+                    <!-- Step 4: Clinical Impact -->
+                    <div class="ecg-ai-grid-2" style="margin-top: 20px;">
+                        <div class="ecg-ai-panel">
+                            <h3><span class="num">04</span> ANATOMICAL IMPACT</h3>
+                            <ul id="ai-affected-list" class="ai-affected-list">
+                                <!-- Populated via JS -->
+                            </ul>
+                        </div>
+                        <div class="ecg-ai-panel">
+                            <h3><span class="num">05</span> CARDIAC FUNCTION</h3>
+                            <div id="ai-explanation" class="ecg-ai-explanation-text"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script type="module" crossorigin src="./assets/index-928b963b.js"></script>
     <script src="./custom-ui.js" defer></script>

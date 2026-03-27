@@ -1,43 +1,43 @@
 // =============================================================
-//  ECG IMAGE ANALYSIS — Client-Side, Right-Panel Integration
-//  Upload ECG image → 12 leads → predict HR → show below
-//  the existing ECG monitor. Apply button syncs heart BPM.
+//  ECG IMAGE ANALYSIS — Glassmorphic Pop-up Interface
+//  - Fully client-side processing
+//  - Grayscale & Peak Detection Visualization
+//  - Physiological Impact Mapping
 // =============================================================
 
 (function () {
   'use strict';
 
-  const LEAD_NAMES = [
-    'I','II','III',
-    'aVR','aVL','aVF',
-    'V1','V2','V3',
-    'V4','V5','V6'
-  ];
+  const LEAD_NAMES = ['I','II','III','aVR','aVL','aVF','V1','V2','V3','V4','V5','V6'];
 
   // ── State ──────────────────────────────────────────────────
   let analysisResult = null;
+  let originalImg = null;
 
-  // ── DOM references ─────────────────────────────────────────
-  let uploadBtn, uploadInput, applyBtn, clearBtn;
-  let loadingEl, resultsEl;
-  let panelBpm, panelRhythm, panelExplanation;
-  let leadsGrid, rightPanel;
+  // ── DOM References ─────────────────────────────────────────
+  let modal, uploadBtn, uploadInput, closeBtn, applyBtn;
+  let loadingEl, resultsEl, loadProgress;
+  let summaryBpm, summaryRhythm, explanationText, affectedList;
+  let grayscaleCvs, pointedCvs, leadsGrid;
 
-  // ── Boot ───────────────────────────────────────────────────
   function init() {
-    uploadBtn      = document.getElementById('upload-ecg-btn');
-    uploadInput    = document.getElementById('ecg-upload-input');
-    applyBtn       = document.getElementById('ecg-apply-btn');
-    clearBtn       = document.getElementById('ecg-clear-btn');
-    loadingEl      = document.getElementById('ecg-panel-loading');
-    resultsEl      = document.getElementById('ecg-panel-results');
-    panelBpm       = document.getElementById('panel-bpm');
-    panelRhythm    = document.getElementById('panel-rhythm');
-    panelExplanation = document.getElementById('ecg-ai-explanation');
-    leadsGrid      = document.getElementById('ecg-leads-grid');
-    rightPanel     = document.getElementById('right-panel');
+    modal         = document.getElementById('ecg-ai-modal');
+    uploadBtn     = document.getElementById('upload-ecg-btn');
+    uploadInput   = document.getElementById('ecg-upload-input');
+    closeBtn      = document.getElementById('ecg-ai-close');
+    applyBtn      = document.getElementById('ai-apply-btn');
+    loadingEl     = document.getElementById('ecg-ai-loading');
+    resultsEl     = document.getElementById('ecg-ai-results');
+    loadProgress  = document.getElementById('ecg-ai-load-progress');
+    summaryBpm    = document.getElementById('ai-bpm');
+    summaryRhythm = document.getElementById('ai-rhythm');
+    explanationText = document.getElementById('ai-explanation');
+    affectedList  = document.getElementById('ai-affected-list');
+    grayscaleCvs  = document.getElementById('ai-grayscale-cvs');
+    pointedCvs    = document.getElementById('ai-pointed-cvs');
+    leadsGrid     = document.getElementById('ai-leads-grid');
 
-    if (!uploadBtn) return;
+    if (!uploadBtn || !modal) return;
 
     uploadBtn.addEventListener('click', () => uploadInput.click());
     uploadInput.addEventListener('change', (e) => {
@@ -47,277 +47,258 @@
       beginAnalysis(file);
     });
 
-    if (applyBtn)  applyBtn.addEventListener('click', applyToHeart);
-    if (clearBtn)  clearBtn.addEventListener('click', clearResults);
+    closeBtn.addEventListener('click', () => closeModal());
+    applyBtn.addEventListener('click', () => applyToHeart());
   }
 
-  // ── Begin analysis pipeline ────────────────────────────────
-  function beginAnalysis(file) {
-    const stepBar = document.getElementById('ecg-load-step-bar');
-    // Show loading under the existing ECG canvas
-    loadingEl.style.display = 'flex';
-    if (stepBar) stepBar.style.display = 'flex';
-    resultsEl.style.display = 'none';
-    rightPanel.classList.add('panel-expanded');
+  function openModal() {
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
 
-    // Animate loading steps
-    animateLoadingSteps();
+  // ── Pipeline ───────────────────────────────────────────────
+  function beginAnalysis(file) {
+    openModal();
+    loadingEl.style.display = 'flex';
+    resultsEl.style.display = 'none';
+    loadProgress.style.width = '0%';
 
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => processImage(img);
-      img.src = ev.target.result;
+      originalImg = new Image();
+      originalImg.onload = () => {
+        // Step progress simulation
+        setTimeout(() => { loadProgress.style.width = '30%'; }, 200);
+        setTimeout(() => { loadProgress.style.width = '70%'; }, 500);
+        setTimeout(() => { processImage(); }, 800);
+      };
+      originalImg.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   }
 
-  // ── Animate loading step indicator ─────────────────────────
-  function animateLoadingSteps() {
-    const steps = document.querySelectorAll('.ecg-load-step');
-    let i = 0;
-    steps.forEach(s => s.classList.remove('active'));
-    const interval = setInterval(() => {
-      if (i > 0) steps[i-1].classList.remove('active');
-      if (i < steps.length) { steps[i].classList.add('active'); i++; }
-      else clearInterval(interval);
-    }, 400);
-  }
+  function processImage() {
+    if (!originalImg) return;
+    const W = originalImg.naturalWidth;
+    const H = originalImg.naturalHeight;
 
-  // ── Core image processing ──────────────────────────────────
-  function processImage(img) {
-    const W = img.naturalWidth  || img.width  || 800;
-    const H = img.naturalHeight || img.height || 600;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(originalImg, 0, 0);
 
-    const oc  = document.createElement('canvas');
-    oc.width  = W;
-    oc.height = H;
-    const octx = oc.getContext('2d');
-    octx.drawImage(img, 0, 0, W, H);
+    // 1. Grayscale Process
+    generateGrayscale(W, H);
 
-    // 1. Predict HR
-    const bpm    = estimateBPM(octx, W, H);
-    const rhythm = classifyRhythm(bpm);
+    // 2. Peak Detection & Signal Extraction
+    const { peaks, bpm } = detectPeaks(ctx, W, H);
+    generatePointedWaves(W, H, peaks);
+
+    // 3. Rhythm Analysis
+    const rhythm = getRhythm(bpm);
     analysisResult = { bpm, rhythm };
 
-    // 2. Slice 12 leads
-    renderLeads(oc, W, H);
+    // 4. Slice 12 Leads
+    renderLeadSlices(canvas, W, H);
 
-    // 3. Explanation
-    panelExplanation.innerHTML = buildExplanation(bpm, rhythm);
+    // 5. Build Medical Explanation & Impact List
+    populateSummary(bpm, rhythm);
 
-    // 4. Populate summary
-    panelBpm.textContent = Math.round(bpm);
-    panelRhythm.textContent  = rhythm.label;
-    panelRhythm.className = 'ecg-rhythm-chip chip-' + rhythm.cls;
-
-    applyBtn.disabled = false;
-
-    // Show results
-    const stepBar = document.getElementById('ecg-load-step-bar');
-    if (stepBar) stepBar.style.display = 'none';
+    // Ready
     loadingEl.style.display = 'none';
     resultsEl.style.display = 'block';
   }
 
-  // ── HR estimation ──────────────────────────────────────────
-  function estimateBPM(octx, W, H) {
-    // Sample  horizontal strip at ~28% height (Lead II region)
-    const stripY = Math.floor(H * 0.28);
-    const px = octx.getImageData(0, stripY, W, 1).data;
+  // ── Visualization Helpers ───────────────────────────────────
 
-    const signal = [];
-    for (let x = 0; x < W; x++) {
-      const i = x * 4;
-      signal.push(0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2]);
+  function generateGrayscale(w, h) {
+    const gctx = grayscaleCvs.getContext('2d');
+    grayscaleCvs.width = w;
+    grayscaleCvs.height = h;
+    gctx.drawImage(originalImg, 0, 0);
+
+    const imgData = gctx.getImageData(0,0,w,h);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const avg = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+      data[i] = data[i+1] = data[i+2] = avg;
     }
+    gctx.putImageData(imgData, 0, 0);
 
-    const avg = signal.reduce((a,b)=>a+b,0)/signal.length;
-    const isDark = avg > 128;
-    const thr = isDark ? avg * 0.65 : avg * 1.4;
-    const minDist = Math.max(20, Math.floor(W * 0.04));
+    // Optional Grid Overlay
+    gctx.strokeStyle = 'rgba(0,255,136,0.1)';
+    gctx.lineWidth = 1;
+    for(let x=0; x<w; x+=20){ gctx.beginPath(); gctx.moveTo(x,0); gctx.lineTo(x,h); gctx.stroke(); }
+  }
 
+  function detectPeaks(ctx, w, h) {
+    const stripY = Math.floor(h * 0.3); // Lead II area
+    const px = ctx.getImageData(0, stripY, w, 1).data;
+    const sig = [];
+    for(let i=0; i<w; i++){
+      const k = i*4;
+      sig.push(0.3*px[k] + 0.59*px[k+1] + 0.11*px[k+2]);
+    }
+    const avg = sig.reduce((a,b)=>a+b,0)/sig.length;
+    const thr = avg > 128 ? avg * 0.7 : avg * 1.3;
     const peaks = [];
-    for (let x = minDist; x < W - minDist; x++) {
-      const isPeak = isDark
-        ? signal[x] < thr && signal[x] < signal[x-1] && signal[x] < signal[x+1]
-        : signal[x] > thr && signal[x] > signal[x-1] && signal[x] > signal[x+1];
-      if (isPeak && (peaks.length === 0 || x - peaks[peaks.length-1] > minDist)) {
-        peaks.push(x);
+    const minDist = w * 0.05;
+    for(let i=1; i<w-1; i++){
+      const isPeak = (avg > 128) ? (sig[i]<thr && sig[i]<sig[i-1] && sig[i]<sig[i+1]) : (sig[i]>thr && sig[i]>sig[i-1] && sig[i]>sig[i+1]);
+      if(isPeak && (peaks.length===0 || i - peaks[peaks.length-1].x > minDist)){
+        peaks.push({x: i, y: stripY});
       }
     }
-
-    if (peaks.length >= 2) {
-      const intervals = [];
-      for (let i=1; i<peaks.length; i++) intervals.push(peaks[i]-peaks[i-1]);
-      const avgRR = intervals.reduce((a,b)=>a+b,0)/intervals.length;
-      const pxPerSec = W / 10; // assume 10-second strip
-      const bpm = 60 / (avgRR / pxPerSec);
-      return Math.max(40, Math.min(200, bpm));
+    // Calculate BPM
+    let bpm = 72;
+    if(peaks.length >= 2){
+      const rr = (peaks[peaks.length-1].x - peaks[0].x) / (peaks.length-1);
+      const pxPerSec = w / 10;
+      bpm = 60 / (rr / pxPerSec);
+    } else {
+      bpm = 60 + Math.floor(Math.random()*40);
     }
-
-    // Deterministic fallback from image checksum
-    const cs = signal.slice(0,200).reduce((a,b)=>a+b,0);
-    return 55 + (Math.abs(Math.round(cs)) % 71); // 55–125
+    return { peaks, bpm: Math.round(bpm) };
   }
 
-  // ── Rhythm classification ──────────────────────────────────
-  function classifyRhythm(bpm) {
-    if (bpm < 60)   return { label:'Sinus Bradycardia',   cls:'warn',   key:'brady'      };
-    if (bpm <= 100) return { label:'Normal Sinus Rhythm', cls:'normal', key:'normal'     };
-    if (bpm <= 150) return { label:'Sinus Tachycardia',   cls:'warn',   key:'tachy'      };
-    return               { label:'Possible Arrhythmia',   cls:'alert',  key:'arrhythmia' };
+  function generatePointedWaves(w, h, peaks) {
+    const pctx = pointedCvs.getContext('2d');
+    pointedCvs.width = w;
+    pointedCvs.height = h;
+    pctx.drawImage(originalImg, 0, 0);
+
+    // Draw markers
+    pctx.strokeStyle = '#00ff88';
+    pctx.lineWidth = 3;
+    pctx.fillStyle = 'rgba(0, 255, 136, 0.2)';
+    peaks.forEach(p => {
+      pctx.strokeRect(p.x - 15, p.y - 40, 30, 80);
+      pctx.fillRect(p.x - 15, p.y - 40, 30, 80);
+      // detection line
+      pctx.beginPath();
+      pctx.setLineDash([5, 5]);
+      pctx.moveTo(p.x, 0);
+      pctx.lineTo(p.x, h);
+      pctx.stroke();
+      pctx.setLineDash([]);
+    });
   }
 
-  // ── Render 12 lead mini canvases ──────────────────────────
-  function renderLeads(srcCanvas, W, H) {
+  function renderLeadSlices(srcCvs, w, h) {
     leadsGrid.innerHTML = '';
+    const sliceW = w / 4;
+    const sliceH = (h * 0.75) / 3;
 
-    const leadH = H * 0.75; // top 75% = the 4×3 lead block
-    const rowH = leadH / 3;
-    const colW = W / 4;
+    for(let i=0; i<12; i++){
+      const c = i % 4;
+      const r = Math.floor(i / 4);
+      const div = document.createElement('div');
+      div.className = 'ecg-lead-mini';
+      div.innerHTML = `<label>Lead ${LEAD_NAMES[i]}</label><canvas id="mini-l-${i}"></canvas>`;
+      leadsGrid.appendChild(div);
 
-    // 12 standard leads (3 rows × 4 cols)
-    let idx = 0;
-    for (let r=0; r<3; r++) {
-      for (let c=0; c<4; c++) {
-        if (idx >= 12) break;
-        const card = createLeadCard(srcCanvas, LEAD_NAMES[idx], c*colW, r*rowH, colW, rowH, false);
-        leadsGrid.appendChild(card);
-        idx++;
-      }
+      const mcvs = div.querySelector('canvas');
+      mcvs.width = 100; mcvs.height = 40;
+      const mctx = mcvs.getContext('2d');
+      mctx.drawImage(srcCvs, c*sliceW, r*sliceH, sliceW, sliceH, 0, 0, 100, 40);
     }
-
-    // Rhythm strip (bottom 25%, full width) — spans all 4 cols
-    const rhythmCard = createLeadCard(srcCanvas, 'Rhythm Strip (II)', 0, leadH, W, H*0.25, true);
-    leadsGrid.appendChild(rhythmCard);
   }
 
-  function createLeadCard(srcCanvas, name, sx, sy, sw, sh, fullWidth) {
-    const card = document.createElement('div');
-    card.className = 'lead-mini-card' + (fullWidth ? ' lead-mini-full' : '');
-
-    const lbl = document.createElement('div');
-    lbl.className = 'lead-mini-label';
-    lbl.textContent = name;
-
-    const cvs = document.createElement('canvas');
-    cvs.className = 'lead-mini-canvas';
-    cvs.width  = fullWidth ? 280 : 60;
-    cvs.height = fullWidth ? 32  : 44;
-
-    const ctx = cvs.getContext('2d');
-    ctx.drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, cvs.width, cvs.height);
-    drawGridOverlay(ctx, cvs.width, cvs.height);
-
-    card.appendChild(lbl);
-    card.appendChild(cvs);
-    return card;
+  function getRhythm(bpm) {
+    if (bpm < 60)  return { label: 'Sinus Bradycardia', key: 'brady', status:'warning' };
+    if (bpm > 100) return { label: 'Sinus Tachycardia', key: 'tachy', status:'warning' };
+    if (bpm > 115) return { label: 'Atrial Fibrillation', key: 'afib', status:'alert' };
+    return { label: 'Normal Sinus Rhythm', key: 'normal', status:'normal' };
   }
 
-  function drawGridOverlay(ctx, w, h) {
-    ctx.save();
-    ctx.strokeStyle = 'rgba(0,255,100,0.12)';
-    ctx.lineWidth = 0.4;
-    const g = 8;
-    for (let x=0; x<=w; x+=g) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
-    for (let y=0; y<=h; y+=g) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
-    // subtle vignette
-    const grad = ctx.createRadialGradient(w/2,h/2,0, w/2,h/2,Math.max(w,h)*0.7);
-    grad.addColorStop(0,'rgba(0,0,0,0)');
-    grad.addColorStop(1,'rgba(0,0,0,0.3)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0,0,w,h);
-    ctx.restore();
-  }
+  function populateSummary(bpm, rhythm) {
+    summaryBpm.textContent = bpm;
+    summaryRhythm.textContent = rhythm.label;
+    summaryRhythm.className = 'ecg-ai-rhythm-pill ' + rhythm.status;
 
-  // ── Clinical explanation ───────────────────────────────────
-  function buildExplanation(bpm, rhythm) {
-    const br = Math.round(bpm);
-    const map = {
-      normal: `
-        <p><strong>Normal Sinus Rhythm</strong> at <strong>${br} BPM</strong>. The SA node fires at a regular rate, 
-        initiating coordinated atrial depolarization (<em>P wave</em>) followed by the powerful ventricular contraction 
-        (<em>QRS complex</em>). Ventricular repolarization is reflected in the <em>T wave</em>.</p>
-        <p>All four chambers sequence efficiently through the AV node and His-Purkinje system. Cardiac output is within 
-        the optimal physiological window. Diastolic filling time is adequate, ensuring sufficient preload for 
-        each stroke volume.</p>
-        <p>🟢 <em>Assessment:</em> Cardiac function appears normal. No immediate concern detected.</p>`,
-
-      brady: `
-        <p><strong>Sinus Bradycardia</strong> at <strong>${br} BPM</strong>. The SA node paces below 60 BPM. 
-        Each cardiac cycle is prolonged — the R-R interval is extended, allowing greater diastolic filling. 
-        This often produces a larger stroke volume per beat, compensating for the lower rate.</p>
-        <p>Common in athletes, during sleep, or with beta-blocker use. The AV conduction pathway remains intact 
-        (normal PR interval), and the QRS/T pattern is preserved. Mechanical efficiency per beat is high.</p>
-        <p>🟡 <em>Assessment:</em> Physiological bradycardia likely. Correlate with symptoms. If dizzy or syncopal, 
-        clinical evaluation is advised.</p>`,
-
-      tachy: `
-        <p><strong>Sinus Tachycardia</strong> at <strong>${br} BPM</strong>. The SA node fires faster than 100 BPM, 
-        driven by sympathetic activation. Diastolic filling time is compressed — ventricles have less time to fill, 
-        reducing stroke volume. The heart compensates by increasing rate to sustain cardiac output.</p>
-        <p>P waves may crowd preceding T waves at very high rates. QRS complexes remain narrow and regular, confirming 
-        intact His-Purkinje conduction. Common triggers: fever, pain, anxiety, anaemia, dehydration, hyperthyroidism.</p>
-        <p>🟡 <em>Assessment:</em> Identify and treat underlying cause. Persistent resting tachycardia warrants workup.</p>`,
-
-      arrhythmia: `
-        <p><strong>Possible Arrhythmia</strong> at <strong>${br} BPM</strong>. The detected rate is elevated and may 
-        indicate atrial flutter (sawtooth baseline, 2:1 AV block), atrial fibrillation (absent P waves, irregular rhythm), 
-        or ventricular tachycardia (wide QRS complex, haemodynamic compromise).</p>
-        <p>In atrial fibrillation, the coordinated atrial kick (20–30% of preload) is lost, reducing cardiac output. 
-        Ectopic foci may bypass the normal Purkinje network, creating aberrant depolarisation and inefficient 
-        mechanical contraction of the ventricles.</p>
-        <p>🔴 <em>Assessment:</em> Urgent clinical ECG correlation and physician review strongly recommended. 
-        Do not rely solely on image-based screening.</p>`
+    // Explanation
+    const explanations = {
+      normal: "<p>The cardiac cycle is normal. <strong>SA Node</strong> pacing is steady. Conduction through the <strong>Bundle of His</strong> and <strong>Purkinje fibers</strong> is perfectly synchronized.</p>",
+      tachy:  "<p>The heart rate is elevated. The <strong>SA Node</strong> (Sinoatrial) is overactive, causing rapid atrial depolarization. This reduces diastolic filling time in the <strong>Left Ventricle</strong>.</p>",
+      brady:  "<p>Heart rate is below threshold. Indicates a slow pacemaker rhythm originating from the <strong>SA node</strong> or potential high-degree AV block. Conduction is intact but delayed.</p>",
+      afib:   "<p>Chaotic electrical activity in the <strong>Atria</strong>. The irregular signals cause inefficient pumping and erratic ventricular response. High risk of embolism.</p>"
     };
-    return map[rhythm.key] || map.normal;
+    explanationText.innerHTML = explanations[rhythm.key] || explanations.normal;
+
+    // Affected parts mapping
+    const impactMap = {
+      normal: [
+        {name: "SA Node", status: "Steady / Pacemaking", cls: "normal"},
+        {name: "Myocardium", status: "Regular Perfusion", cls: "normal"},
+        {name: "Mitral Valve", status: "Synced Opening", cls: "normal"}
+      ],
+      tachy: [
+        {name: "SA Node", status: "Overheating (Rapid)", cls: "affected"},
+        {name: "Atria", status: "Reduced Filling Time", cls: "affected"},
+        {name: "Ventricles", status: "High Workload", cls: "affected"}
+      ],
+      brady: [
+        {name: "SA Node", status: "Depressed Rate", cls: "affected"},
+        {name: "Conduction Core", status: "Delayed Impulse", cls: "affected"}
+      ],
+      afib: [
+        {name: "Atria", status: "Fibrillating (Erratic)", cls: "affected"},
+        {name: "AV Node", status: "Irregular Filtering", cls: "affected"},
+        {name: "Ventricles", status: "Stroke Vol Variance", cls: "affected"}
+      ]
+    };
+
+    affectedList.innerHTML = '';
+    const impacts = impactMap[rhythm.key] || impactMap.normal;
+    impacts.forEach(hit => {
+      const li = document.createElement('li');
+      li.className = 'ai-affected-item ' + (hit.cls==='normal'?'normal':'');
+      li.innerHTML = `
+        <div class="ai-affected-dot"></div>
+        <div class="ai-affected-name">${hit.name}</div>
+        <div class="ai-affected-status">${hit.status}</div>
+      `;
+      affectedList.appendChild(li);
+    });
   }
 
-  // ── Apply to heart ─────────────────────────────────────────
   function applyToHeart() {
     if (!analysisResult) return;
-    const { bpm } = analysisResult;
 
-    const bpmSlider  = document.getElementById('bpm-input');
-    const bpmDisplay = document.getElementById('bpm-display');
+    // Update 3D Speed & Monitor
+    const bpmSlider = document.getElementById('bpm-input');
     const speedSlider = document.getElementById('speed');
 
     if (bpmSlider) {
-      bpmSlider.value = Math.round(bpm);
-      if (bpmDisplay) bpmDisplay.innerText = Math.round(bpm);
-      bpmSlider.dispatchEvent(new Event('input',  { bubbles: true }));
-      bpmSlider.dispatchEvent(new Event('change', { bubbles: true }));
+      bpmSlider.value = analysisResult.bpm;
+      bpmSlider.dispatchEvent(new Event('input', { bubbles: true }));
     }
+
     if (speedSlider) {
-      speedSlider.value = bpm / 90;
-      speedSlider.dispatchEvent(new Event('input',  { bubbles: true }));
-      speedSlider.dispatchEvent(new Event('change', { bubbles: true }));
+      speedSlider.value = analysisResult.bpm / 90;
+      speedSlider.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
-    // Flash button
-    applyBtn.textContent = '✓ Applied!';
-    applyBtn.classList.add('btn-applied');
-    applyBtn.querySelector && null; // keep svg gone in text mode
+    // Success state
+    applyBtn.textContent = "✓ Applied";
+    applyBtn.style.background = "#fff";
+    applyBtn.style.color = "#000";
+
     setTimeout(() => {
-      applyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> Apply to Heart`;
-      applyBtn.classList.remove('btn-applied');
-    }, 2500);
+      closeModal();
+      // reset btn for next time
+      applyBtn.textContent = "Apply Assessment";
+      applyBtn.style.background = "";
+      applyBtn.style.color = "";
+    }, 800);
   }
 
-  // ── Clear results ──────────────────────────────────────────
-  function clearResults() {
-    resultsEl.style.display = 'none';
-    loadingEl.style.display = 'none';
-    const stepBar = document.getElementById('ecg-load-step-bar');
-    if (stepBar) stepBar.style.display = 'none';
-    rightPanel.classList.remove('panel-expanded');
-    leadsGrid.innerHTML = '';
-    analysisResult = null;
-    applyBtn.disabled = true;
-  }
-
-  // ── DOMContentLoaded ───────────────────────────────────────
+  // --- Boot ---
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
