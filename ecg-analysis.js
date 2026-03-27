@@ -270,6 +270,13 @@
   function applyToHeart() {
     if (!analysisResult) return;
 
+    // Resuming AudioContext satisfies browser autoplay policies
+    if (window.audioContexts) {
+      window.audioContexts.forEach(ctx => {
+        if (ctx.state === 'suspended') ctx.resume();
+      });
+    }
+
     // Update 3D Speed & Monitor
     const bpmSlider = document.getElementById('bpm-input');
     const speedSlider = document.getElementById('speed');
